@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
+import redis from "../../lib/redis";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -21,11 +22,33 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false });
     }
 
-    return NextResponse.json({
+    // prevent double counting
+    const alreadyCounted = await redis.get(`payment:${paymentId}`);
+    if (alreadyCounted) {
+      return NextResponse.json(JSON.parse(alreadyCounted));
+    }
+
+    // atomic increments
+    const rank = await redis.incr("totalPayments");
+    const totalAmount = await redis.incrby(
+      "totalAmount",
+      (payment as any).amount / 100
+    );
+
+    const response = {
       success: true,
-      amount: (payment as any).amount / 100,
-    });
-  } catch (error) {
+      rank,
+      totalPayments: rank,
+      totalAmount,
+    };
+
+    await redis.set(
+      `payment:${paymentId}`,
+      JSON.stringify(response)
+    );
+
+    return NextResponse.json(response);
+  } catch (err) {
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
