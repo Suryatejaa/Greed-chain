@@ -1,6 +1,4 @@
-import Link from "next/link";
 import CashfreeButton from "./components/CashfreeButton";
-import CashfreeButton2 from "./components/CashfreeButton2";
 
 export default function Home() {
   return (
@@ -13,27 +11,13 @@ export default function Home() {
         </p>
 
         <p className="mb-8 text-sm opacity-60">
-          Pay to participate. Rank determines order.
+          Pay ₹1 to enter. View gossips. Add one sentence.
         </p>
 
-        <div className="space-y-4 mb-8">
-          <div>
-            <p className="text-sm opacity-70 mb-3">₹1 - Add a sentence</p>
-            <CashfreeButton />
-          </div>
-
-          <div>
-            <p className="text-sm opacity-70 mb-3">₹2 - Create a gossip</p>
-            <CashfreeButton2 />
-          </div>
+        <div className="mb-8 flex flex-col items-center">
+          <p className="text-sm opacity-70 mb-3">₹1 - Enter & Add a sentence</p>
+          <CashfreeButton />
         </div>
-
-        <Link
-          href="/gossips"
-          className="text-blue-400 underline text-sm"
-        >
-          Browse existing gossips
-        </Link>
 
         <p className="text-xs opacity-40 mt-8">
           No rewards. No refunds. Just stories.

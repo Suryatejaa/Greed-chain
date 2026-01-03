@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import CashfreeButton2 from "../../components/CashfreeButton2";
 
 interface Sentence {
   id: string;
@@ -19,12 +20,40 @@ interface Gossip {
 
 function GossipContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const id = params?.id as string;
+  const paymentId = searchParams.get("payment_id");
   const [gossip, setGossip] = useState<Gossip | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [verifying, setVerifying] = useState(!!paymentId);
 
   useEffect(() => {
-    if (!id) return;
+    // Verify payment first
+    if (paymentId) {
+      fetch(`/api/check-payment?payment_id=${paymentId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.exists && data.amount === 1) {
+            setPaymentVerified(true);
+          } else {
+            router.push("/");
+          }
+          setVerifying(false);
+        })
+        .catch(() => {
+          setVerifying(false);
+          router.push("/");
+        });
+    } else {
+      // No payment, redirect to home
+      router.push("/");
+    }
+  }, [paymentId, router]);
+
+  useEffect(() => {
+    if (!id || !paymentVerified) return;
 
     fetch(`/api/gossips/${id}`)
       .then((res) => res.json())
@@ -40,7 +69,21 @@ function GossipContent() {
         setGossip(null);
         setLoading(false);
       });
-  }, [id]);
+  }, [id, paymentVerified]);
+
+  if (verifying) {
+    return (
+      <main className="min-h-screen bg-black text-white p-4">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-center opacity-60">Verifying access...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!paymentVerified) {
+    return null; // Will redirect
+  }
 
   if (loading) {
     return (
@@ -93,25 +136,41 @@ function GossipContent() {
           ))}
         </div>
 
-        <div className="border-t border-white/20 pt-6">
-          <p className="text-sm opacity-60 mb-4">
-            This gossip is being written one sentence at a time.
-            You can read it.
-            You can only add once.
-            ₹1.
-          </p>
-          <button
-            onClick={() => {
-              navigator.share?.({
-                title: gossip.title,
-                text: `Read this gossip on GreedChain: ${gossip.title}`,
-                url: window.location.href,
-              }) || navigator.clipboard.writeText(window.location.href);
-            }}
-            className="bg-white text-black px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-200 transition-colors"
-          >
-            Share Gossip
-          </button>
+        <div className="border-t border-white/20 pt-6 space-y-4">
+          <div className="flex flex-col items-center">
+            <p className="text-sm opacity-70 mb-3">₹2 - Create a new gossip</p>
+            <CashfreeButton2 />
+          </div>
+
+          <div>
+            <p className="text-sm opacity-60 mb-4">
+              This gossip is being written one sentence at a time.
+              You can read it.
+              You can only add once.
+              ₹1.
+            </p>
+            <button
+              onClick={() => {
+                navigator.share?.({
+                  title: gossip.title,
+                  text: `Read this gossip on GreedChain: ${gossip.title}`,
+                  url: window.location.href,
+                }) || navigator.clipboard.writeText(window.location.href);
+              }}
+              className="bg-white text-black px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-200 transition-colors"
+            >
+              Share Gossip
+            </button>
+          </div>
+
+          {paymentId && (
+            <Link
+              href={`/add-sentence?payment_id=${paymentId}&gossip_id=${id}`}
+              className="block bg-white/10 border border-white/20 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white/20 transition-colors text-center"
+            >
+              Add Your Sentence
+            </Link>
+          )}
         </div>
       </div>
     </main>

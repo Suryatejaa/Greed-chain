@@ -12,8 +12,9 @@ function AddSentenceContent() {
   const params = useSearchParams();
   const router = useRouter();
   const paymentId = params.get("payment_id");
+  const preSelectedGossipId = params.get("gossip_id");
   const [gossips, setGossips] = useState<Gossip[]>([]);
-  const [selectedGossipId, setSelectedGossipId] = useState("");
+  const [selectedGossipId, setSelectedGossipId] = useState(preSelectedGossipId || "");
   const [sentence, setSentence] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -77,7 +78,7 @@ function AddSentenceContent() {
         setError(data.error);
         setLoading(false);
       } else {
-        router.push(`/gossips/${selectedGossipId}`);
+        router.push(`/gossips/${selectedGossipId}?payment_id=${paymentId}`);
       }
     } catch (err) {
       setError("Failed to add sentence. Please try again.");
