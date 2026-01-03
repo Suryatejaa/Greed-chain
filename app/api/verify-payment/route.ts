@@ -35,17 +35,29 @@ export async function GET(req: Request) {
       (payment as any).amount / 100
     );
 
+    const amount = (payment as any).amount / 100; // Convert from paise to rupees
+    const amountType = amount === 1 ? "addSentence" : amount === 2 ? "createGossip" : "unknown";
+
     const response = {
       success: true,
       rank,
       totalPayments: rank,
       totalAmount,
+      amount,
+      amountType,
+      paymentId,
     };
 
+    // Store payment info and mark as unused initially
     await redis.set(
       `payment:${paymentId}`,
-      JSON.stringify(response)
+      JSON.stringify(response),
+      "EX",
+      86400 * 30 // 30 days expiry
     );
+    
+    // Track usage separately (starts as unused)
+    await redis.set(`payment:${paymentId}:used`, "false", "EX", 86400 * 30);
 
     return NextResponse.json(response);
   } catch (err) {
