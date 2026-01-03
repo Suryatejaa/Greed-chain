@@ -79,13 +79,26 @@ export async function GET(req: Request) {
       );
     }
 
-    // Use order_id or payment_id as the unique identifier
-    const paymentIdentifier = `cashfree_${identifier}`;
+    // Check if order_id exists in our mapping (from webhook)
+    let paymentIdentifier = `cashfree_${identifier}`;
+    const orderMapping = await redis.get(`order:${identifier}`);
+    if (orderMapping) {
+      paymentIdentifier = orderMapping;
+    }
 
     // Prevent double counting
     const alreadyCounted = await redis.get(`payment:${paymentIdentifier}`);
     if (alreadyCounted) {
       return NextResponse.json(JSON.parse(alreadyCounted));
+    }
+
+    // If payment was verified via webhook, it should already exist
+    // Check if webhook already processed this
+    if (orderMapping) {
+      const webhookPayment = await redis.get(`payment:${orderMapping}`);
+      if (webhookPayment) {
+        return NextResponse.json(JSON.parse(webhookPayment));
+      }
     }
 
     // Atomic increments

@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import CashfreeButton2 from "../components/CashfreeButton2";
 
 interface Gossip {
   id: string;
@@ -57,13 +58,18 @@ function GossipsListAfterPayment({ paymentId, rank }: { paymentId: string; rank:
 
         <h2 className="text-2xl font-bold mb-6">Gossips</h2>
 
+        <div className="mb-6 flex flex-col items-center">
+          <p className="text-sm opacity-70 mb-3">₹2 - Create a new gossip</p>
+          <CashfreeButton2 />
+        </div>
+
         {loading ? (
           <p className="text-center opacity-60">Loading gossips...</p>
         ) : gossips.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-xl mb-4 opacity-60">No gossips yet.</p>
             <p className="text-sm opacity-40">
-              Pay ₹2 from any gossip page to start the first one.
+              Use the button above to start the first one.
             </p>
           </div>
         ) : (
@@ -101,9 +107,22 @@ function SuccessContent() {
     const [error, setError] = useState<string | null>(null);
     
     useEffect(() => {
+        // Helper function to check if a value is a placeholder
+        const isPlaceholder = (value: string | null): boolean => {
+            if (!value) return false;
+            // Check for URL-encoded placeholders like %7Border_id%7D or literal {order_id}
+            return value.includes('%7B') || value.includes('{') || value.includes('%7D') || value.includes('}');
+        };
+
         // Try to get payment info from URL params first
         let identifier = orderId || paymentId;
         let amount = amountParam;
+
+        // Check if identifier is a placeholder (Cashfree sends {order_id} instead of real ID)
+        if (identifier && isPlaceholder(identifier)) {
+            console.warn("Placeholder detected in payment ID, ignoring:", identifier);
+            identifier = null; // Don't use placeholder values
+        }
 
         // If no params in URL, try to get from sessionStorage (set before redirect)
         if (!identifier) {
@@ -111,8 +130,16 @@ function SuccessContent() {
             const storedPaymentId = sessionStorage.getItem("cashfree_payment_id");
             const storedAmount = sessionStorage.getItem("cashfree_amount");
             
-            identifier = storedOrderId || storedPaymentId;
-            amount = storedAmount || amount;
+            // Check if stored values are also placeholders
+            if (storedOrderId && !isPlaceholder(storedOrderId)) {
+                identifier = storedOrderId;
+            } else if (storedPaymentId && !isPlaceholder(storedPaymentId)) {
+                identifier = storedPaymentId;
+            }
+            
+            if (storedAmount) {
+                amount = storedAmount;
+            }
             
             // Clean up session storage
             if (storedOrderId) sessionStorage.removeItem("cashfree_order_id");
@@ -131,9 +158,24 @@ function SuccessContent() {
             }
         }
         
+        // If we have no real identifier but have amount, we can't verify payment
+        // This means Cashfree isn't sending real IDs - we need webhooks or different approach
         if (!identifier && !amount) {
             setError("Missing payment information. Please try again or contact support.");
             setStatus("failed");
+            return;
+        }
+
+        // If we only have amount but no identifier, try to find payment via webhook
+        // Webhooks may have already processed the payment
+        if (!identifier && amount) {
+            // Wait a moment for webhook to process, then check again
+            setTimeout(() => {
+                // Try to find payment by checking recent payments or use session
+                // For now, show error but suggest waiting
+                setError("Payment verification in progress. If you just completed payment, please wait a few seconds and refresh. Otherwise, contact support.");
+                setStatus("failed");
+            }, 2000);
             return;
         }
 
@@ -150,6 +192,7 @@ function SuccessContent() {
             queryParams.append("amount", amount);
         }
 
+        // Only proceed if we have a real identifier (not a placeholder)
         fetch(`/api/verify-payment-cashfree?${queryParams.toString()}`)
             .then(res => res.json())
             .then(data => {
@@ -157,13 +200,13 @@ function SuccessContent() {
                     setStatus("success");
                     setData(data);
                 } else {
-                    setError(data.error || "Payment verification failed");
+                    setError(data.error || "Payment verification failed. Please ensure the payment was successful.");
                     setStatus("failed");
                 }
             })
             .catch(err => {
                 console.error("Payment verification error:", err);
-                setError("Failed to verify payment");
+                setError("Failed to verify payment. Please try again or contact support.");
                 setStatus("failed");
             });
     }, [orderId, paymentId, amountParam, redirectionTime]);
@@ -192,11 +235,12 @@ function SuccessContent() {
         );
     }
 
-    const paymentAmount = data?.amount || 0;
+    // Use amount from URL param first (since Cashfree redirects with it), then from API response
+    const paymentAmount = amountParam ? parseFloat(amountParam) : (data?.amount || 0);
     const rank = data?.rank || 0;
     const verifiedPaymentId = data?.paymentId || orderId || paymentId;
 
-    // ₹2 payment - Show create gossip option (only accessible from gossip page)
+    // ₹2 payment - Show create gossip option
     if (paymentAmount === 2) {
         return (
             <main className="min-h-screen flex items-center justify-center bg-black text-white p-4">
