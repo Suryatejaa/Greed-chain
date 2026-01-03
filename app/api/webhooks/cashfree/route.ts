@@ -22,11 +22,15 @@ export async function POST(req: NextRequest) {
     const body = JSON.parse(rawBody);
 
     // Verify webhook signature
-    const secretKey = process.env.CASHFREE_SECRET_KEY;
+    // Use CASHFREE_KEY_SECRET (matches your .env.local) or CASHFREE_SECRET_KEY as fallback
+    const secretKey = process.env.CASHFREE_KEY_SECRET || process.env.CASHFREE_SECRET_KEY;
     if (!secretKey) {
-      console.error("CASHFREE_SECRET_KEY not configured");
+      console.error("CASHFREE_KEY_SECRET or CASHFREE_SECRET_KEY not configured");
       return NextResponse.json(
-        { error: "Webhook secret not configured" },
+        { 
+          error: "Webhook secret not configured",
+          message: "Please set CASHFREE_KEY_SECRET in your environment variables"
+        },
         { status: 500 }
       );
     }

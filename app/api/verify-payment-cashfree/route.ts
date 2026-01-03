@@ -30,9 +30,9 @@ export async function GET(req: Request) {
       amount = parseFloat(amountParam);
     } else {
       // Try to fetch order details from Cashfree API
-      // You'll need to set CASHFREE_APP_ID and CASHFREE_SECRET_KEY in env
-      const cashfreeAppId = process.env.CASHFREE_APP_ID;
-      const cashfreeSecretKey = process.env.CASHFREE_SECRET_KEY;
+      // Use CASHFREE_KEY_ID and CASHFREE_KEY_SECRET (matches your .env.local)
+      const cashfreeAppId = process.env.CASHFREE_KEY_ID || process.env.CASHFREE_APP_ID;
+      const cashfreeSecretKey = process.env.CASHFREE_KEY_SECRET || process.env.CASHFREE_SECRET_KEY;
       const cashfreeEnv = process.env.CASHFREE_ENV || "PRODUCTION"; // PRODUCTION or TEST
 
       if (cashfreeAppId && cashfreeSecretKey) {
