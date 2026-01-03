@@ -17,6 +17,7 @@ function SuccessContent() {
                 if (data.success) {
                     setStatus("success");
                     setData(data);
+                    console.log('Data: ',data)
                 } else {
                     setStatus("failed");
                 }
