@@ -3,6 +3,11 @@
 import logo from "../../public/logo/s-logo.png"
 
 export default function CashfreeButton2() {
+  const handleClick = () => {
+    // Store payment info in sessionStorage before redirect
+    sessionStorage.setItem("cashfree_amount", "2");
+  };
+
   return (
     <form>
       <a
@@ -10,6 +15,7 @@ export default function CashfreeButton2() {
         target="_parent"
         rel="noopener noreferrer"
         style={{ textDecoration: "none" }}
+        onClick={handleClick}
       >
         <div
           style={{

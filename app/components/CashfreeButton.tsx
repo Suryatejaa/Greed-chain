@@ -4,6 +4,12 @@ import Image from "next/image";
 import logo from "../../public/logo/s-logo.png"
 
 export default function CashfreeButton() {
+  const handleClick = () => {
+    // Store payment info in sessionStorage before redirect
+    sessionStorage.setItem("cashfree_amount", "1");
+    // Note: We can't get order_id/payment_id before payment, but we store amount
+  };
+
   return (
     <form>
       <a
@@ -11,6 +17,7 @@ export default function CashfreeButton() {
         target="_parent"
         rel="noopener noreferrer"
         style={{ textDecoration: "none" }}
+        onClick={handleClick}
       >
         <div
           style={{

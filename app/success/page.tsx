@@ -91,29 +91,64 @@ function GossipsListAfterPayment({ paymentId, rank }: { paymentId: string; rank:
 function SuccessContent() {
     const params = useSearchParams();
     const router = useRouter();
-    // Cashfree returns order_id in the callback URL
+    // Cashfree may return parameters in URL or we need to get from session/referrer
     const orderId = params.get("order_id");
-    const paymentId = params.get("payment_id"); // Cashfree may also return this
-    const amountParam = params.get("amount"); // Amount from URL (1 or 2)
+    const paymentId = params.get("payment_id");
+    const amountParam = params.get("amount");
+    const redirectionTime = params.get("redirection_time");
     const [status, setStatus] = useState("verifying");
     const [data, setData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     
     useEffect(() => {
-        // Cashfree typically returns order_id
-        const identifier = orderId || paymentId;
-        
+        // Try to get payment info from URL params first
+        let identifier = orderId || paymentId;
+        let amount = amountParam;
+
+        // If no params in URL, try to get from sessionStorage (set before redirect)
         if (!identifier) {
-            setError("Missing payment information");
+            const storedOrderId = sessionStorage.getItem("cashfree_order_id");
+            const storedPaymentId = sessionStorage.getItem("cashfree_payment_id");
+            const storedAmount = sessionStorage.getItem("cashfree_amount");
+            
+            identifier = storedOrderId || storedPaymentId;
+            amount = storedAmount || amount;
+            
+            // Clean up session storage
+            if (storedOrderId) sessionStorage.removeItem("cashfree_order_id");
+            if (storedPaymentId) sessionStorage.removeItem("cashfree_payment_id");
+            if (storedAmount) sessionStorage.removeItem("cashfree_amount");
+        }
+
+        // If still no identifier, check if we can determine amount from referrer
+        if (!identifier && !amount) {
+            // Check referrer to determine which payment form was used
+            const referrer = document.referrer;
+            if (referrer.includes("greed-chain")) {
+                amount = "1"; // ₹1 payment form
+            } else if (referrer.includes("create-greed-story")) {
+                amount = "2"; // ₹2 payment form
+            }
+        }
+        
+        if (!identifier && !amount) {
+            setError("Missing payment information. Please try again or contact support.");
             setStatus("failed");
             return;
         }
 
         // Build query string for Cashfree verification
         const queryParams = new URLSearchParams();
-        if (orderId) queryParams.append("order_id", orderId);
-        if (paymentId) queryParams.append("payment_id", paymentId);
-        if (amountParam) queryParams.append("amount", amountParam);
+        if (identifier) {
+            if (orderId || identifier.startsWith("order_")) {
+                queryParams.append("order_id", identifier);
+            } else {
+                queryParams.append("payment_id", identifier);
+            }
+        }
+        if (amount) {
+            queryParams.append("amount", amount);
+        }
 
         fetch(`/api/verify-payment-cashfree?${queryParams.toString()}`)
             .then(res => res.json())
@@ -131,7 +166,7 @@ function SuccessContent() {
                 setError("Failed to verify payment");
                 setStatus("failed");
             });
-    }, [orderId, paymentId, amountParam]);
+    }, [orderId, paymentId, amountParam, redirectionTime]);
 
     if (status === "verifying") {
         return (
