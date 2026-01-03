@@ -106,7 +106,7 @@ export async function GET(req: Request) {
     const totalAmount = await redis.incrby("totalAmount", amount);
 
     const amountType =
-      amount === 1 ? "addSentence" : amount === 2 ? "createGossip" : "unknown";
+      amount === 1 ? "addSentence" : amount === 2 ? "createStory" : "unknown";
 
     const response = {
       success: true,

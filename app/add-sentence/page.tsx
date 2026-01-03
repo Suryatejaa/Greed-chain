@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-interface Gossip {
+interface Story {
   id: string;
   title: string;
 }
@@ -11,51 +11,68 @@ interface Gossip {
 function AddSentenceContent() {
   const params = useSearchParams();
   const router = useRouter();
-  const paymentId = params.get("payment_id");
-  const preSelectedGossipId = params.get("gossip_id");
-  const [gossips, setGossips] = useState<Gossip[]>([]);
-  const [selectedGossipId, setSelectedGossipId] = useState(preSelectedGossipId || "");
+  const preSelectedStoryId = params.get("story_id");
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [selectedStoryId, setSelectedStoryId] = useState(preSelectedStoryId || "");
   const [sentence, setSentence] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [gossipsLoading, setGossipsLoading] = useState(true);
+  const [storiesLoading, setStoriesLoading] = useState(true);
+  const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
-    if (!paymentId) {
+    // Check sessionStorage for payment_id
+    const storedPaymentId = sessionStorage.getItem("razorpay_payment_id");
+    
+    if (!storedPaymentId) {
       router.push("/");
       return;
     }
 
+    setPaymentId(storedPaymentId);
+
     // Check if payment is valid and unused
-    fetch(`/api/check-payment?payment_id=${paymentId}`)
+    fetch(`/api/check-payment?payment_id=${storedPaymentId}`)
       .then((res) => res.json())
       .then((data) => {
-        if (!data.exists || data.used || data.amount !== 1) {
-          router.push("/");
+        if (!data.exists || data.amount !== 1) {
+          // Invalid payment or wrong amount
+          router.push("/stories");
+        } else if (data.used) {
+          // Payment already used - can't add another sentence
+          router.push("/stories");
+        } else {
+          // Payment is valid and unused
+          setVerifying(false);
         }
+      })
+      .catch(() => {
+        // Network error - redirect to stories
+        router.push("/stories");
       });
 
-    // Load gossips
-    fetch("/api/gossips")
+    // Load stories
+    fetch("/api/stories")
       .then((res) => res.json())
       .then((data) => {
-        setGossips(data.gossips || []);
-        setGossipsLoading(false);
+        setStories(data.stories || []);
+        setStoriesLoading(false);
       })
-      .catch(() => setGossipsLoading(false));
-  }, [paymentId, router]);
+      .catch(() => setStoriesLoading(false));
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentId || !selectedGossipId) return;
+    if (!paymentId || !selectedStoryId) return;
 
     if (sentence.trim().length === 0) {
       setError("Sentence is required");
       return;
     }
 
-    if (sentence.length > 30) {
-      setError("Sentence must be 30 characters or less");
+    if (sentence.length > 150) {
+      setError("Sentence must be 150 characters or less");
       return;
     }
 
@@ -63,7 +80,7 @@ function AddSentenceContent() {
     setError("");
 
     try {
-      const res = await fetch(`/api/gossips/${selectedGossipId}/add-sentence`, {
+      const res = await fetch(`/api/stories/${selectedStoryId}/add-sentence`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -78,7 +95,7 @@ function AddSentenceContent() {
         setError(data.error);
         setLoading(false);
       } else {
-        router.push(`/gossips/${selectedGossipId}?payment_id=${paymentId}`);
+        router.push(`/stories/${selectedStoryId}`);
       }
     } catch (err) {
       setError("Failed to add sentence. Please try again.");
@@ -86,8 +103,14 @@ function AddSentenceContent() {
     }
   };
 
-  if (!paymentId) {
-    return null;
+  if (verifying || !paymentId) {
+    return (
+      <main className="min-h-screen bg-black text-white p-4">
+        <div className="max-w-md mx-auto">
+          <p className="text-center opacity-60">Verifying access...</p>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -96,37 +119,37 @@ function AddSentenceContent() {
         <h1 className="text-3xl font-bold mb-6">Add a Sentence</h1>
 
         <p className="text-sm opacity-60 mb-6">
-          You can add ONE sentence total. Choose your gossip carefully.
+          You can add ONE sentence total. Choose your story carefully.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm opacity-80 mb-2">
-              Select Gossip
+              Select Story
             </label>
-            {gossipsLoading ? (
-              <p className="text-sm opacity-60">Loading gossips...</p>
-            ) : gossips.length === 0 ? (
+            {storiesLoading ? (
+              <p className="text-sm opacity-60">Loading stories...</p>
+            ) : stories.length === 0 ? (
               <p className="text-sm opacity-60">
-                No gossips available. Create one first.
+                No stories available. Create one first.
               </p>
             ) : (
               <div className="space-y-2">
-                {gossips.map((gossip) => (
+                {stories.map((story) => (
                   <label
-                    key={gossip.id}
+                    key={story.id}
                     className="flex items-center space-x-3 p-3 border border-white/20 rounded-lg cursor-pointer hover:border-white/40 transition-colors"
                   >
                     <input
                       type="radio"
-                      name="gossip"
-                      value={gossip.id}
-                      checked={selectedGossipId === gossip.id}
-                      onChange={(e) => setSelectedGossipId(e.target.value)}
+                      name="story"
+                      value={story.id}
+                      checked={selectedStoryId === story.id}
+                      onChange={(e) => setSelectedStoryId(e.target.value)}
                       className="w-4 h-4"
                       required
                     />
-                    <span>{gossip.title}</span>
+                    <span>{story.title}</span>
                   </label>
                 ))}
               </div>
@@ -135,18 +158,18 @@ function AddSentenceContent() {
 
           <div>
             <label className="block text-sm opacity-80 mb-2">
-              Your Sentence (max 30 characters)
+              Your Sentence (max 150 characters)
             </label>
             <textarea
               value={sentence}
               onChange={(e) => setSentence(e.target.value)}
               className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:border-white/40 h-24 resize-none"
               placeholder="Write your sentence..."
-              maxLength={30}
+              maxLength={150}
               required
             />
             <p className="text-xs opacity-60 mt-1 text-right">
-              {sentence.length}/30
+              {sentence.length}/150
             </p>
           </div>
 
@@ -158,7 +181,7 @@ function AddSentenceContent() {
 
           <button
             type="submit"
-            disabled={loading || !selectedGossipId}
+            disabled={loading || !selectedStoryId}
             className="w-full bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Adding..." : "Add Sentence"}

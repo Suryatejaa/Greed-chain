@@ -1,0 +1,249 @@
+"use client";
+
+import { useEffect, useState, Suspense } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import RazorpayButton2 from "../../components/RazorpayButton2";
+import RazorpayButton from "@/app/components/RazorpayButton";
+
+interface Sentence {
+  id: string;
+  text: string;
+  rank: number;
+}
+
+interface Story {
+  id: string;
+  title: string;
+  creatorRank: number;
+  sentences: Sentence[];
+}
+
+function StoryContent() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params?.id as string;
+  const [story, setStory] = useState<Story | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [verifying, setVerifying] = useState(true);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [userRank, setUserRank] = useState<number | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
+  const [paymentUsed, setPaymentUsed] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Check sessionStorage for payment_id
+    const storedPaymentId = sessionStorage.getItem("razorpay_payment_id");
+    
+    if (!storedPaymentId) {
+      // No payment in session, redirect to home
+      router.push("/");
+      return;
+    }
+
+    setPaymentId(storedPaymentId);
+
+    // Get user's rank from sessionStorage
+    const storedRank = sessionStorage.getItem("razorpay_payment_rank");
+    if (storedRank) {
+      setUserRank(parseInt(storedRank, 10));
+    }
+
+    // Verify payment is valid
+    fetch(`/api/check-payment?payment_id=${storedPaymentId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        // Allow access if payment exists and is ₹1 or ₹2 (regardless of used status)
+        // Used payments still grant read access
+        if (data.exists && (data.amount === 1 || data.amount === 2)) {
+          setPaymentVerified(true);
+          setPaymentAmount(data.amount);
+          setPaymentUsed(data.used || false);
+          // Also set rank from API response if not in sessionStorage
+          if (!storedRank && data.rank) {
+            setUserRank(data.rank);
+          }
+        } else if (data.error) {
+          // API error, don't clear sessionStorage yet, just redirect
+          console.error("Payment check error:", data.error);
+          router.push("/");
+        } else {
+          // Payment doesn't exist or invalid amount, clear session and redirect
+          sessionStorage.removeItem("razorpay_payment_id");
+          sessionStorage.removeItem("razorpay_payment_amount");
+          sessionStorage.removeItem("razorpay_payment_rank");
+          router.push("/");
+        }
+        setVerifying(false);
+      })
+      .catch((err) => {
+        console.error("Error checking payment:", err);
+        // Network error - don't clear sessionStorage, just redirect
+        // SessionStorage might still be valid, let user try again
+        router.push("/");
+        setVerifying(false);
+      });
+  }, [router]);
+
+  useEffect(() => {
+    if (!id || !paymentVerified) return;
+
+    fetch(`/api/stories/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          setStory(null);
+        } else {
+          setStory(data);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setStory(null);
+        setLoading(false);
+      });
+  }, [id, paymentVerified]);
+
+  if (verifying) {
+    return (
+      <main className="min-h-screen bg-black text-white p-4">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-center opacity-60">Verifying access...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!paymentVerified) {
+    return null; // Will redirect
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black text-white p-4">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-center opacity-60">Loading...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!story) {
+    return (
+      <main className="min-h-screen bg-black text-white p-4">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl mb-4">Story not found</h1>
+          <Link href="/stories" className="text-blue-400 underline">
+            Back to stories
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // Sort sentences by rank (ascending - first come first, latest at bottom)
+  const sortedSentences = [...story.sentences].sort((a, b) => a.rank - b.rank);
+
+  return (
+    <main className="min-h-screen bg-black text-white p-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-4">
+          <Link
+            href="/stories"
+            className="text-blue-400 underline text-sm mb-4 inline-block"
+          >
+            ← Back to stories
+          </Link>
+          <h1 className="text-3xl font-bold mb-2">{story.title}</h1>
+          <p className="text-sm opacity-60">
+            Origin: #{story.creatorRank} • {story.sentences.length} sentence{story.sentences.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+
+        <div className="max-h-[60vh] overflow-y-auto mb-6 pr-2">
+          <div className="space-y-3">
+            {sortedSentences.map((sentence) => (
+              <div
+                key={sentence.id}
+                className="border-l-2 border-white/20 pl-4 py-2"
+              >
+                <span className="text-xs opacity-40 mr-3">#{sentence.rank}</span>
+                <span className="text-lg">{sentence.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-white/20 pt-6 space-y-4">
+          <div className="flex flex-col items-center">
+            <p className="text-sm opacity-70 mb-3">₹2 - Create a new story</p>
+            <RazorpayButton2 />
+          </div>
+
+          <div>
+            <p className="text-sm opacity-60 mb-4">
+              This story is being written one sentence at a time.
+              You can read it.
+              You can only add once.
+              ₹1.
+            </p>
+            <button
+              onClick={() => {
+                navigator.share?.({
+                  title: story.title,
+                  text: `Read this story on GreedChain: ${story.title}`,
+                  url: window.location.href,
+                }) || navigator.clipboard.writeText(window.location.href);
+              }}
+              className="bg-white text-black px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-200 transition-colors"
+            >
+              Share Story
+            </button>
+          </div>
+
+          {paymentId && paymentAmount === 1 && !paymentUsed && userRank !== null && !story.sentences.some(s => s.rank === userRank) ? (
+            <Link
+              href={`/add-sentence?story_id=${id}`}
+              className="block bg-white/10 border border-white/20 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white/20 transition-colors text-center"
+            >
+              Add Your Sentence
+            </Link>
+          ) : paymentAmount === 1 && paymentUsed ? (
+            <>
+            <p className="text-sm opacity-60 mb-4">
+              You have already used your ₹1 payment to add a sentence. Pay again to add another.
+            </p>
+            <RazorpayButton />
+            </> 
+          ) : paymentAmount === 2 ? (
+            <>
+            <p className="text-sm opacity-60 mb-4">
+              You paid ₹2 to create stories. Pay ₹1 to add sentences.
+            </p>
+            <RazorpayButton />
+            </>
+          ) : null
+          }
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function StoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-black text-white p-4">
+          <div className="max-w-2xl mx-auto">
+            <p className="text-center opacity-60">Loading...</p>
+          </div>
+        </main>
+      }
+    >
+      <StoryContent />
+    </Suspense>
+  );
+}
+

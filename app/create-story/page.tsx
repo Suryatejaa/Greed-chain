@@ -3,30 +3,40 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-function CreateGossipContent() {
-  const params = useSearchParams();
+function CreateStoryContent() {
   const router = useRouter();
-  const paymentId = params.get("payment_id");
+  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [firstSentence, setFirstSentence] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
-    if (!paymentId) {
+    // Check sessionStorage for payment_id
+    const storedPaymentId = sessionStorage.getItem("razorpay_payment_id");
+    
+    if (!storedPaymentId) {
       router.push("/");
       return;
     }
 
+    setPaymentId(storedPaymentId);
+
     // Check if payment is valid and unused
-    fetch(`/api/check-payment?payment_id=${paymentId}`)
+    fetch(`/api/check-payment?payment_id=${storedPaymentId}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.exists || data.used || data.amount !== 2) {
           router.push("/");
+        } else {
+          setVerifying(false);
         }
+      })
+      .catch(() => {
+        router.push("/");
       });
-  }, [paymentId, router]);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,8 +52,8 @@ function CreateGossipContent() {
       return;
     }
 
-    if (firstSentence.length > 30) {
-      setError("Sentence must be 30 characters or less");
+    if (firstSentence.length > 150) {
+      setError("Sentence must be 150 characters or less");
       return;
     }
 
@@ -51,7 +61,7 @@ function CreateGossipContent() {
     setError("");
 
     try {
-      const res = await fetch("/api/gossips/create", {
+      const res = await fetch("/api/stories/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -67,22 +77,29 @@ function CreateGossipContent() {
         setError(data.error);
         setLoading(false);
       } else {
-        router.push(`/gossips/${data.gossipId}`);
+        // After creating story, redirect to stories list
+        router.push(`/stories`);
       }
     } catch (err) {
-      setError("Failed to create gossip. Please try again.");
+      setError("Failed to create story. Please try again.");
       setLoading(false);
     }
   };
 
-  if (!paymentId) {
-    return null;
+  if (verifying || !paymentId) {
+    return (
+      <main className="min-h-screen bg-black text-white p-4">
+        <div className="max-w-md mx-auto">
+          <p className="text-center opacity-60">Verifying access...</p>
+        </div>
+      </main>
+    );
   }
 
   return (
     <main className="min-h-screen bg-black text-white p-4">
       <div className="max-w-md mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Start a Gossip</h1>
+        <h1 className="text-3xl font-bold mb-6">Start a Story</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -92,7 +109,7 @@ function CreateGossipContent() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:border-white/40"
-              placeholder="Give your gossip a title..."
+              placeholder="Give your story a title..."
               maxLength={100}
               required
             />
@@ -100,18 +117,18 @@ function CreateGossipContent() {
 
           <div>
             <label className="block text-sm opacity-80 mb-2">
-              First Sentence (max 30 characters)
+              First Sentence (max 150 characters)
             </label>
             <textarea
               value={firstSentence}
               onChange={(e) => setFirstSentence(e.target.value)}
               className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:border-white/40 h-24 resize-none"
               placeholder="Write the first sentence..."
-              maxLength={30}
+              maxLength={150}
               required
             />
             <p className="text-xs opacity-60 mt-1 text-right">
-              {firstSentence.length}/30
+              {firstSentence.length}/150
             </p>
           </div>
 
@@ -126,7 +143,7 @@ function CreateGossipContent() {
             disabled={loading}
             className="w-full bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Creating..." : "Create Gossip"}
+            {loading ? "Creating..." : "Create Story"}
           </button>
         </form>
 
@@ -138,7 +155,7 @@ function CreateGossipContent() {
   );
 }
 
-export default function CreateGossipPage() {
+export default function CreateStoryPage() {
   return (
     <Suspense
       fallback={
@@ -149,7 +166,7 @@ export default function CreateGossipPage() {
         </main>
       }
     >
-      <CreateGossipContent />
+      <CreateStoryContent />
     </Suspense>
   );
 }

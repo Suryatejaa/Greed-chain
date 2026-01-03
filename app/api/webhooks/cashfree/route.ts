@@ -42,25 +42,63 @@ export async function POST(req: NextRequest) {
       .update(signatureString)
       .digest("base64");
 
+    console.log("Signature verification:", {
+      received: signature?.substring(0, 20) + "...",
+      computed: computedSignature?.substring(0, 20) + "...",
+      match: computedSignature === signature,
+    });
+
     if (computedSignature !== signature) {
-      console.error("Invalid webhook signature");
+      console.error("Invalid webhook signature", {
+        received: signature,
+        computed: computedSignature,
+        timestamp,
+        bodyLength: rawBody.length,
+      });
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 401 }
       );
     }
 
+    console.log("Webhook signature verified successfully");
+
     // Process webhook payload
     const eventType = body.type;
     const orderData = body.data?.order;
 
-    if (eventType !== "PAYMENT_FORM_ORDER_WEBHOOK" || !orderData) {
-      return NextResponse.json({ received: true });
+    console.log("Processing webhook:", {
+      eventType,
+      hasOrderData: !!orderData,
+      orderStatus: orderData?.order_status,
+    });
+
+    // Handle test webhooks or non-payment events
+    if (eventType !== "PAYMENT_FORM_ORDER_WEBHOOK") {
+      console.log("Non-payment form webhook event:", eventType);
+      return NextResponse.json({ 
+        received: true, 
+        message: "Webhook received but not a payment form order event",
+        eventType 
+      });
+    }
+
+    if (!orderData) {
+      console.error("Webhook missing order data");
+      return NextResponse.json({ 
+        received: true, 
+        error: "Missing order data in webhook payload" 
+      });
     }
 
     // Only process PAID orders
     if (orderData.order_status !== "PAID") {
-      return NextResponse.json({ received: true, status: "not_paid" });
+      console.log("Order not paid, status:", orderData.order_status);
+      return NextResponse.json({ 
+        received: true, 
+        status: "not_paid",
+        orderStatus: orderData.order_status 
+      });
     }
 
     const orderId = orderData.order_id;
@@ -86,7 +124,7 @@ export async function POST(req: NextRequest) {
     const totalAmount = await redis.incrby("totalAmount", amount);
 
     const amountType =
-      amount === 1 ? "addSentence" : amount === 2 ? "createGossip" : "unknown";
+      amount === 1 ? "addSentence" : amount === 2 ? "createStory" : "unknown";
 
     const paymentData = {
       success: true,

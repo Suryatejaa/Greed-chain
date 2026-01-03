@@ -1,6 +1,58 @@
-import CashfreeButton from "./components/CashfreeButton";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import RazorpayButton from "./components/RazorpayButton";
 
 export default function Home() {
+  const router = useRouter();
+  const [hasPayment, setHasPayment] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Check if payment exists in sessionStorage
+    const paymentId = sessionStorage.getItem("razorpay_payment_id");
+    
+    if (paymentId) {
+      // Verify the payment is still valid
+      fetch(`/api/check-payment?payment_id=${paymentId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.exists) {
+            // Payment exists and is valid, redirect to stories
+            router.push("/stories");
+          } else {
+            // Payment doesn't exist or is invalid, clear sessionStorage
+            sessionStorage.removeItem("razorpay_payment_id");
+            sessionStorage.removeItem("razorpay_payment_amount");
+            sessionStorage.removeItem("razorpay_payment_rank");
+            setHasPayment(false);
+          }
+        })
+        .catch(() => {
+          // Error checking payment, clear and show payment button
+          sessionStorage.removeItem("razorpay_payment_id");
+          sessionStorage.removeItem("razorpay_payment_amount");
+          sessionStorage.removeItem("razorpay_payment_rank");
+          setHasPayment(false);
+        });
+    } else {
+      // No payment in sessionStorage
+      setHasPayment(false);
+    }
+  }, [router]);
+
+  // Show loading while checking sessionStorage
+  if (hasPayment === null) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4">
+        <div className="max-w-md w-full text-center">
+          <p className="opacity-60">Checking access...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Show payment button if no valid payment
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4">
       <div className="max-w-md w-full text-center">
@@ -11,12 +63,12 @@ export default function Home() {
         </p>
 
         <p className="mb-8 text-sm opacity-60">
-          Pay ₹1 to enter. View gossips. Add one sentence.
+          Pay ₹1 to enter. View stories. Add one sentence.
         </p>
 
         <div className="mb-8 flex flex-col items-center">
           <p className="text-sm opacity-70 mb-3">₹1 - Enter & Add a sentence</p>
-          <CashfreeButton />
+          <RazorpayButton />
         </div>
 
         <p className="text-xs opacity-40 mt-8">

@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import redis from "../../../../lib/redis";
+import redis from "../../../lib/redis";
 
-// POST /api/gossips/[id]/add-sentence - Add a sentence to a gossip
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// POST /api/stories/create - Create a new story
+export async function POST(req: NextRequest) {
   try {
-    const { paymentId, text } = await req.json();
-    const { id: gossipId } = params;
+    const { paymentId, title, firstSentence } = await req.json();
 
-    if (!paymentId || !text) {
+    if (!paymentId || !title || !firstSentence) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -18,17 +14,11 @@ export async function POST(
     }
 
     // Validate sentence length
-    if (text.length > 30) {
+    if (firstSentence.length > 150) {
       return NextResponse.json(
-        { error: "Sentence must be 30 characters or less" },
+        { error: "Sentence must be 150 characters or less" },
         { status: 400 }
       );
-    }
-
-    // Check if gossip exists
-    const meta = await redis.hgetall(`gossip:${gossipId}:meta`);
-    if (!meta.title) {
-      return NextResponse.json({ error: "Gossip not found" }, { status: 404 });
     }
 
     // Check if payment exists and is valid
@@ -42,10 +32,10 @@ export async function POST(
 
     const payment = JSON.parse(paymentData);
     
-    // Verify payment amount is ₹1
-    if (payment.amount !== 1) {
+    // Verify payment amount is ₹2
+    if (payment.amount !== 2) {
       return NextResponse.json(
-        { error: "Payment must be ₹1 to add a sentence" },
+        { error: "Payment must be ₹2 to create a story" },
         { status: 400 }
       );
     }
@@ -54,37 +44,50 @@ export async function POST(
     const isUsed = await redis.get(`payment:${paymentId}:used`);
     if (isUsed === "true") {
       return NextResponse.json(
-        { error: "Payment already used. Pay again to add another sentence." },
+        { error: "Payment already used" },
         { status: 400 }
       );
     }
 
+    // Generate story ID
+    const storyId = `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     // Generate sentence ID
     const sentenceId = `sentence_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create sentence
-    await redis.hset(`sentence:${sentenceId}`, {
-      text,
-      authorPaymentId: paymentId,
-      rank: payment.rank.toString(),
-      gossipId,
+    // Create story meta
+    await redis.hset(`story:${storyId}:meta`, {
+      title: title.substring(0, 100), // Limit title length
+      creatorPaymentId: paymentId,
+      createdRank: payment.rank.toString(),
     });
 
-    // Add sentence to gossip's sorted set (score = rank for ordering)
-    await redis.zadd(`gossip:${gossipId}:sentences`, payment.rank, sentenceId);
+    // Create first sentence
+    await redis.hset(`sentence:${sentenceId}`, {
+      text: firstSentence,
+      authorPaymentId: paymentId,
+      rank: payment.rank.toString(),
+      storyId,
+    });
+
+    // Add sentence to story's sorted set (score = rank)
+    await redis.zadd(`story:${storyId}:sentences`, payment.rank, sentenceId);
+
+    // Add story to all stories list
+    await redis.rpush("story:all", storyId);
 
     // Mark payment as used
     await redis.set(`payment:${paymentId}:used`, "true");
 
     return NextResponse.json({
       success: true,
+      storyId,
       sentenceId,
-      rank: payment.rank,
     });
   } catch (err) {
-    console.error("Error adding sentence:", err);
+    console.error("Error creating story:", err);
     return NextResponse.json(
-      { error: "Failed to add sentence" },
+      { error: "Failed to create story" },
       { status: 500 }
     );
   }

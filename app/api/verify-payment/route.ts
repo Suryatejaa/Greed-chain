@@ -30,13 +30,14 @@ export async function GET(req: Request) {
 
     // atomic increments
     const rank = await redis.incr("totalPayments");
+    const amountInRupees = Math.round((payment as any).amount / 100); // Convert from paise to rupees and ensure integer
     const totalAmount = await redis.incrby(
       "totalAmount",
-      (payment as any).amount / 100
+      amountInRupees
     );
 
-    const amount = (payment as any).amount / 100; // Convert from paise to rupees
-    const amountType = amount === 1 ? "addSentence" : amount === 2 ? "createGossip" : "unknown";
+    const amount = amountInRupees; // Already converted above
+    const amountType = amount === 1 ? "addSentence" : amount === 2 ? "createStory" : "unknown";
 
     const response = {
       success: true,
