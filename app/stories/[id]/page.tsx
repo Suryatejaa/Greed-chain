@@ -31,21 +31,23 @@ function StoryContent() {
   const [userRank, setUserRank] = useState<number | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
   const [paymentUsed, setPaymentUsed] = useState<boolean>(false);
+  const [sentencesUsed, setSentencesUsed] = useState<number>(0);
+  const [maxSentences, setMaxSentences] = useState<number>(0);
 
   useEffect(() => {
-    // Check sessionStorage for payment_id
-    const storedPaymentId = sessionStorage.getItem("razorpay_payment_id");
+    // Check localStorage for payment_id
+    const storedPaymentId = localStorage.getItem("razorpay_payment_id");
     
     if (!storedPaymentId) {
-      // No payment in session, redirect to home
+      // No payment in localStorage, redirect to home
       router.push("/");
       return;
     }
 
     setPaymentId(storedPaymentId);
 
-    // Get user's rank from sessionStorage
-    const storedRank = sessionStorage.getItem("razorpay_payment_rank");
+    // Get user's rank from localStorage
+    const storedRank = localStorage.getItem("razorpay_payment_rank");
     if (storedRank) {
       setUserRank(parseInt(storedRank, 10));
     }
@@ -54,33 +56,35 @@ function StoryContent() {
     fetch(`/api/check-payment?payment_id=${storedPaymentId}`)
       .then((res) => res.json())
       .then((data) => {
-        // Allow access if payment exists and is ₹1 or ₹2 (regardless of used status)
+        // Allow access if payment exists and is ₹1, ₹5, ₹11, or ₹2 (regardless of used status)
         // Used payments still grant read access
-        if (data.exists && (data.amount === 1 || data.amount === 2)) {
+        if (data.exists && (data.amount === 1 || data.amount === 5 || data.amount === 11 || data.amount === 2)) {
           setPaymentVerified(true);
           setPaymentAmount(data.amount);
           setPaymentUsed(data.used || false);
-          // Also set rank from API response if not in sessionStorage
+          setSentencesUsed(data.sentencesUsed || 0);
+          setMaxSentences(data.maxSentences || 0);
+          // Also set rank from API response if not in localStorage
           if (!storedRank && data.rank) {
             setUserRank(data.rank);
           }
         } else if (data.error) {
-          // API error, don't clear sessionStorage yet, just redirect
+          // API error, don't clear localStorage yet, just redirect
           console.error("Payment check error:", data.error);
           router.push("/");
         } else {
-          // Payment doesn't exist or invalid amount, clear session and redirect
-          sessionStorage.removeItem("razorpay_payment_id");
-          sessionStorage.removeItem("razorpay_payment_amount");
-          sessionStorage.removeItem("razorpay_payment_rank");
+          // Payment doesn't exist or invalid amount, clear localStorage and redirect
+          localStorage.removeItem("razorpay_payment_id");
+          localStorage.removeItem("razorpay_payment_amount");
+          localStorage.removeItem("razorpay_payment_rank");
           router.push("/");
         }
         setVerifying(false);
       })
       .catch((err) => {
         console.error("Error checking payment:", err);
-        // Network error - don't clear sessionStorage, just redirect
-        // SessionStorage might still be valid, let user try again
+        // Network error - don't clear localStorage, just redirect
+        // localStorage might still be valid, let user try again
         router.push("/");
         setVerifying(false);
       });
@@ -177,16 +181,14 @@ function StoryContent() {
 
         <div className="border-t border-white/20 pt-6 space-y-4">
           <div className="flex flex-col items-center">
-            <p className="text-sm opacity-70 mb-3">₹2 - Create a new story</p>
+            <p className="text-sm opacity-70 mb-3">Start Your Own Story</p>
             <RazorpayButton2 />
           </div>
 
           <div>
             <p className="text-sm opacity-60 mb-4">
               This story is being written one sentence at a time.
-              You can read it.
-              You can only add once.
-              ₹1.
+              Read it. Contribute once. It&apos;s permanent.
             </p>
             <button
               onClick={() => {
@@ -202,27 +204,27 @@ function StoryContent() {
             </button>
           </div>
 
-          {paymentId && paymentAmount === 1 && !paymentUsed && userRank !== null && !story.sentences.some(s => s.rank === userRank) ? (
+          {paymentId && (paymentAmount === 1 || paymentAmount === 5 || paymentAmount === 11) && userRank !== null && !story.sentences.some(s => s.rank === userRank) && sentencesUsed < maxSentences ? (
             <Link
               href={`/add-sentence?story_id=${id}`}
               className="block bg-white/10 border border-white/20 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white/20 transition-colors text-center"
             >
-              Add Your Sentence
+              Add Your Sentence {maxSentences > 1 ? `(${maxSentences - sentencesUsed} remaining)` : ''}
             </Link>
-          ) : paymentAmount === 1 && paymentUsed ? (
+          ) : (paymentAmount === 1 || paymentAmount === 5 || paymentAmount === 11) && sentencesUsed >= maxSentences ? (
             <>
             <p className="text-sm opacity-60 mb-4">
-              You have already used your ₹1 payment to add a sentence. Pay again to add another.
+              You&apos;ve used all your sentences ({sentencesUsed}/{maxSentences}). Get access again to add more.
             </p>
-            <RazorpayButton />
+            <RazorpayButton paymentButtonId="pl_Rz65r6ImL0PS8U" formId="razorpay-form-story-1" />
             </> 
           ) : paymentAmount === 2 ? (
             <>
             <p className="text-sm opacity-60 mb-4">
-              You paid ₹2 to create stories. Pay ₹1 to add sentences.
+              You have creator access. Get contributor access to add sentences.
             </p>
-            <RazorpayButton />
-            </>
+            <RazorpayButton paymentButtonId="pl_Rz65r6ImL0PS8U" formId="razorpay-form-story-2" />
+            </> 
           ) : null
           }
         </div>

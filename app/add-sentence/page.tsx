@@ -22,8 +22,8 @@ function AddSentenceContent() {
   const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
-    // Check sessionStorage for payment_id
-    const storedPaymentId = sessionStorage.getItem("razorpay_payment_id");
+    // Check localStorage for payment_id
+    const storedPaymentId = localStorage.getItem("razorpay_payment_id");
     
     if (!storedPaymentId) {
       router.push("/");
@@ -36,11 +36,11 @@ function AddSentenceContent() {
     fetch(`/api/check-payment?payment_id=${storedPaymentId}`)
       .then((res) => res.json())
       .then((data) => {
-        if (!data.exists || data.amount !== 1) {
-          // Invalid payment or wrong amount
+        if (!data.exists || (data.amount !== 1 && data.amount !== 5 && data.amount !== 11)) {
+          // Invalid payment or wrong amount (must be ₹1, ₹5, or ₹11 for adding sentences)
           router.push("/stories");
-        } else if (data.used) {
-          // Payment already used - can't add another sentence
+        } else if (data.sentencesUsed >= (data.maxSentences || 0)) {
+          // Sentence limit reached
           router.push("/stories");
         } else {
           // Payment is valid and unused
@@ -116,10 +116,10 @@ function AddSentenceContent() {
   return (
     <main className="min-h-screen bg-black text-white p-4">
       <div className="max-w-md mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Add a Sentence</h1>
+        <h1 className="text-3xl font-bold mb-6">Contribute</h1>
 
         <p className="text-sm opacity-60 mb-6">
-          You can add ONE sentence total. Choose your story carefully.
+          One sentence. One story. Permanent.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -189,7 +189,7 @@ function AddSentenceContent() {
         </form>
 
         <p className="text-xs opacity-40 mt-6 text-center">
-          No edits after submission. No refunds.
+          Permanent. No edits. No refunds.
         </p>
       </div>
     </main>

@@ -37,7 +37,29 @@ export async function GET(req: Request) {
     );
 
     const amount = amountInRupees; // Already converted above
-    const amountType = amount === 1 ? "addSentence" : amount === 2 ? "createStory" : "unknown";
+    
+    // Define tier limits
+    let maxSentences = 0;
+    let maxStories = 0;
+    let amountType = "unknown";
+    
+    if (amount === 1) {
+      maxSentences = 1;
+      maxStories = 0;
+      amountType = "addSentence";
+    } else if (amount === 5) {
+      maxSentences = 3;
+      maxStories = 1;
+      amountType = "pro";
+    } else if (amount === 11) {
+      maxSentences = 5;
+      maxStories = 3;
+      amountType = "maestro";
+    } else if (amount === 2) {
+      maxSentences = 0;
+      maxStories = 1;
+      amountType = "createStory";
+    }
 
     const response = {
       success: true,
@@ -47,9 +69,11 @@ export async function GET(req: Request) {
       amount,
       amountType,
       paymentId,
+      maxSentences,
+      maxStories,
     };
 
-    // Store payment info and mark as unused initially
+    // Store payment info
     await redis.set(
       `payment:${paymentId}`,
       JSON.stringify(response),
@@ -57,8 +81,14 @@ export async function GET(req: Request) {
       86400 * 30 // 30 days expiry
     );
     
-    // Track usage separately (starts as unused)
-    await redis.set(`payment:${paymentId}:used`, "false", "EX", 86400 * 30);
+    // Initialize usage counters
+    await redis.set(`payment:${paymentId}:sentences_used`, "0", "EX", 86400 * 30);
+    await redis.set(`payment:${paymentId}:stories_used`, "0", "EX", 86400 * 30);
+    
+    // For backward compatibility with ₹1 (old boolean check)
+    if (amount === 1) {
+      await redis.set(`payment:${paymentId}:used`, "false", "EX", 86400 * 30);
+    }
 
     return NextResponse.json(response);
   } catch (err) {

@@ -11,10 +11,13 @@ function CreateStoryContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [verifying, setVerifying] = useState(true);
+  const [storiesUsed, setStoriesUsed] = useState<number>(0);
+  const [maxStories, setMaxStories] = useState<number>(0);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
 
   useEffect(() => {
-    // Check sessionStorage for payment_id
-    const storedPaymentId = sessionStorage.getItem("razorpay_payment_id");
+    // Check localStorage for payment_id
+    const storedPaymentId = localStorage.getItem("razorpay_payment_id");
     
     if (!storedPaymentId) {
       router.push("/");
@@ -27,9 +30,19 @@ function CreateStoryContent() {
     fetch(`/api/check-payment?payment_id=${storedPaymentId}`)
       .then((res) => res.json())
       .then((data) => {
-        if (!data.exists || data.used || data.amount !== 2) {
+        // Check if payment allows story creation (₹2, ₹5, or ₹11)
+        if (!data.exists || data.amount === 1) {
+          router.push("/");
+        } else if (data.amount === 2 && data.used) {
+          // ₹2 is single-use
+          router.push("/");
+        } else if ((data.amount === 5 || data.amount === 11) && (data.storiesUsed || 0) >= (data.maxStories || 0)) {
+          // ₹5 and ₹11 have limits
           router.push("/");
         } else {
+          setStoriesUsed(data.storiesUsed || 0);
+          setMaxStories(data.maxStories || 0);
+          setPaymentAmount(data.amount || 0);
           setVerifying(false);
         }
       })
@@ -100,6 +113,11 @@ function CreateStoryContent() {
     <main className="min-h-screen bg-black text-white p-4">
       <div className="max-w-md mx-auto">
         <h1 className="text-3xl font-bold mb-6">Start a Story</h1>
+        {maxStories > 1 && (
+          <p className="text-sm opacity-60 mb-4">
+            Stories remaining: {maxStories - storiesUsed}/{maxStories}
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

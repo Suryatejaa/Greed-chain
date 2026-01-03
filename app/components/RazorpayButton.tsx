@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export default function RazorpayButton() {
+interface RazorpayButtonProps {
+  paymentButtonId: string;
+  formId?: string;
+}
+
+export default function RazorpayButton({ 
+  paymentButtonId, 
+  formId = "razorpay-form" 
+}: RazorpayButtonProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -26,7 +34,7 @@ export default function RazorpayButton() {
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/payment-button.js";
       script.async = true;
-      script.setAttribute("data-payment_button_id", "pl_Rz65r6ImL0PS8U");
+      script.setAttribute("data-payment_button_id", paymentButtonId);
       
       // Add error handling
       script.onerror = () => {
@@ -39,12 +47,12 @@ export default function RazorpayButton() {
     return () => {
       cancelAnimationFrame(frameId);
     };
-  }, [isReady]);
+  }, [isReady, paymentButtonId]);
 
   return (
     <form
       ref={formRef}
-      id="razorpay-form"
+      id={formId}
       className="razorpay-payment-button"
     ></form>
   );

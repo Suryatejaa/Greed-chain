@@ -27,7 +27,7 @@ function StoriesListAfterPayment({ paymentId, rank }: { paymentId: string; rank:
     }, []);
 
     const handleShare = () => {
-        const shareText = `I paid ₹1 and got ranked #${rank} on GreedChain. See where you stand.`;
+        const shareText = `I'm ranked #${rank} on GreedChain. Join the narrative.`;
         const shareUrl = window.location.origin;
 
         navigator.share?.({
@@ -41,25 +41,25 @@ function StoriesListAfterPayment({ paymentId, rank }: { paymentId: string; rank:
         <main className="min-h-screen bg-black text-white p-4">
             <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold mb-2">Welcome</h1>
+                    <h1 className="text-3xl font-bold mb-2">Access Granted</h1>
                     <p className="mb-4 opacity-80">
-                        You paid ₹1. Rank #{rank}
+                        You&apos;re in. Rank #{rank}
                     </p>
                     <p className="text-sm opacity-60 mb-6">
-                        You can add ONE sentence to any story. Max 150 characters. No edits.
+                        Add one sentence to any story. 150 characters max. Permanent.
                     </p>
                     <button
                         onClick={handleShare}
                         className="bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
                     >
-                        Share & Challenge Friends
+                        Share Access
                     </button>
                 </div>
 
                 <h2 className="text-2xl font-bold mb-6">Stories</h2>
 
                 <div className="mb-6 flex flex-col items-center">
-                    <p className="text-sm opacity-70 mb-3">₹2 - Create a new story</p>
+                    <p className="text-sm opacity-70 mb-3">Start Your Own Story</p>
                     <RazorpayButton2 />
                 </div>
 
@@ -115,13 +115,13 @@ function SuccessContent() {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    // Store payment_id in sessionStorage for read-only access
-                    sessionStorage.setItem("razorpay_payment_id", paymentId);
-                    sessionStorage.setItem("razorpay_payment_amount", data.amount.toString());
-                    sessionStorage.setItem("razorpay_payment_rank", data.rank.toString());
+                    // Store payment_id in localStorage for permanent read-only access
+                    localStorage.setItem("razorpay_payment_id", paymentId);
+                    localStorage.setItem("razorpay_payment_amount", data.amount.toString());
+                    localStorage.setItem("razorpay_payment_rank", data.rank.toString());
                     
-                    // If ₹2 payment, redirect directly to /create-story
-                    if (data.amount === 2) {
+                    // If ₹2, ₹5, or ₹11 payment, redirect to /create-story (they can create stories)
+                    if (data.amount === 2 || data.amount === 5 || data.amount === 11) {
                         router.push("/create-story");
                         return;
                     }
@@ -168,17 +168,21 @@ function SuccessContent() {
     const rank = data?.rank || 0;
     const verifiedPaymentId = data?.paymentId || paymentId;
 
-    // ₹2 payment - Show create story option
-    if (paymentAmount === 2) {
+    // ₹2, ₹5, or ₹11 payment - Show create story option
+    if (paymentAmount === 2 || paymentAmount === 5 || paymentAmount === 11) {
+        const maxStories = paymentAmount === 2 ? 1 : paymentAmount === 5 ? 1 : 3;
+        const maxSentences = paymentAmount === 2 ? 0 : paymentAmount === 5 ? 3 : 5;
         return (
             <main className="min-h-screen flex items-center justify-center bg-black text-white p-4">
                 <div className="max-w-md w-full text-center">
                     <h1 className="text-3xl font-bold mb-6">Start a Story</h1>
                     <p className="mb-4 opacity-80">
-                        You paid ₹2. Rank #{rank}
+                        Creator access. Rank #{rank}
                     </p>
                     <p className="mb-8 text-sm opacity-60">
-                        You can create ONE story. Choose your words carefully.
+                        {paymentAmount === 2 ? "One story. One chance. Make it count." : 
+                         paymentAmount === 5 ? `Create ${maxStories} story, add ${maxSentences} sentences.` :
+                         `Create ${maxStories} stories, add ${maxSentences} sentences.`}
                     </p>
                     <Link
                         href={`/create-story`}

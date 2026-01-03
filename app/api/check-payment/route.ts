@@ -20,14 +20,25 @@ export async function GET(req: NextRequest) {
     }
 
     const payment = JSON.parse(paymentData);
+    
+    // Get usage counts
+    const sentencesUsed = parseInt(await redis.get(`payment:${paymentId}:sentences_used`) || "0", 10);
+    const storiesUsed = parseInt(await redis.get(`payment:${paymentId}:stories_used`) || "0", 10);
+    
+    // For backward compatibility with ₹1 (old boolean check)
     const isUsed = await redis.get(`payment:${paymentId}:used`);
+    const used = isUsed === "true" || (payment.amount === 1 && sentencesUsed >= 1);
 
     return NextResponse.json({
       exists: true,
-      used: isUsed === "true",
+      used,
       amount: payment.amount,
       amountType: payment.amountType,
       rank: payment.rank,
+      maxSentences: payment.maxSentences || (payment.amount === 1 ? 1 : 0),
+      maxStories: payment.maxStories || 0,
+      sentencesUsed,
+      storiesUsed,
     });
   } catch (err) {
     console.error("Error checking payment:", err);

@@ -32,19 +32,22 @@ export async function POST(req: NextRequest) {
 
     const payment = JSON.parse(paymentData);
     
-    // Verify payment amount is ₹2
-    if (payment.amount !== 2) {
+    // Check if payment allows story creation (₹2, ₹5, or ₹11)
+    if (payment.amount !== 2 && payment.amount !== 5 && payment.amount !== 11) {
       return NextResponse.json(
-        { error: "Payment must be ₹2 to create a story" },
+        { error: "This payment tier does not allow story creation" },
         { status: 400 }
       );
     }
 
-    // Check if payment already used
-    const isUsed = await redis.get(`payment:${paymentId}:used`);
-    if (isUsed === "true") {
+    // Get current story usage
+    const storiesUsed = parseInt(await redis.get(`payment:${paymentId}:stories_used`) || "0", 10);
+    const maxStories = payment.maxStories || (payment.amount === 2 ? 1 : 0);
+    
+    // Check if story limit reached
+    if (storiesUsed >= maxStories) {
       return NextResponse.json(
-        { error: "Payment already used" },
+        { error: `You have reached your story creation limit (${maxStories} story${maxStories !== 1 ? 's' : ''})` },
         { status: 400 }
       );
     }
@@ -76,8 +79,13 @@ export async function POST(req: NextRequest) {
     // Add story to all stories list
     await redis.rpush("story:all", storyId);
 
-    // Mark payment as used
-    await redis.set(`payment:${paymentId}:used`, "true");
+    // Increment story usage counter
+    const newStoriesUsed = await redis.incr(`payment:${paymentId}:stories_used`);
+    
+    // For backward compatibility with ₹2 (old boolean check)
+    if (payment.amount === 2) {
+      await redis.set(`payment:${paymentId}:used`, "true");
+    }
 
     return NextResponse.json({
       success: true,

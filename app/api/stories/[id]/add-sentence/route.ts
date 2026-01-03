@@ -42,19 +42,22 @@ export async function POST(
 
     const payment = JSON.parse(paymentData);
     
-    // Verify payment amount is ₹1
-    if (payment.amount !== 1) {
+    // Check if payment allows sentence addition (₹1, ₹5, or ₹11)
+    if (payment.amount !== 1 && payment.amount !== 5 && payment.amount !== 11) {
       return NextResponse.json(
-        { error: "Payment must be ₹1 to add a sentence" },
+        { error: "This payment tier does not allow adding sentences" },
         { status: 400 }
       );
     }
 
-    // Check if payment already used
-    const isUsed = await redis.get(`payment:${paymentId}:used`);
-    if (isUsed === "true") {
+    // Get current sentence usage
+    const sentencesUsed = parseInt(await redis.get(`payment:${paymentId}:sentences_used`) || "0", 10);
+    const maxSentences = payment.maxSentences || (payment.amount === 1 ? 1 : 0);
+    
+    // Check if sentence limit reached
+    if (sentencesUsed >= maxSentences) {
       return NextResponse.json(
-        { error: "Payment already used. Pay again to add another sentence." },
+        { error: `You have reached your sentence limit (${maxSentences} sentence${maxSentences !== 1 ? 's' : ''})` },
         { status: 400 }
       );
     }
@@ -73,8 +76,13 @@ export async function POST(
     // Add sentence to story's sorted set (score = rank for ordering)
     await redis.zadd(`story:${storyId}:sentences`, payment.rank, sentenceId);
 
-    // Mark payment as used
-    await redis.set(`payment:${paymentId}:used`, "true");
+    // Increment sentence usage counter
+    const newSentencesUsed = await redis.incr(`payment:${paymentId}:sentences_used`);
+    
+    // For backward compatibility with ₹1 (old boolean check)
+    if (payment.amount === 1) {
+      await redis.set(`payment:${paymentId}:used`, "true");
+    }
 
     return NextResponse.json({
       success: true,

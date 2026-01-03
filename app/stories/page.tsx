@@ -20,9 +20,9 @@ function StoriesContent() {
   const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
-    // Check sessionStorage for payment_id
-    const paymentId = sessionStorage.getItem("razorpay_payment_id");
-    
+    // Check localStorage for payment_id
+    const paymentId = localStorage.getItem("razorpay_payment_id");
+
     if (!paymentId) {
       // No payment in session, redirect to home
       router.push("/");
@@ -33,27 +33,27 @@ function StoriesContent() {
     fetch(`/api/check-payment?payment_id=${paymentId}`)
       .then((res) => res.json())
       .then((data) => {
-        // Allow access if payment exists and is ₹1 or ₹2 (regardless of used status)
+        // Allow access if payment exists and is ₹1, ₹5, ₹11, or ₹2 (regardless of used status)
         // Used payments still grant read access
-        if (data.exists && (data.amount === 1 || data.amount === 2)) {
+        if (data.exists && (data.amount === 1 || data.amount === 5 || data.amount === 11 || data.amount === 2)) {
           setPaymentVerified(true);
         } else if (data.error) {
-          // API error, don't clear sessionStorage yet, just redirect
+          // API error, don't clear localStorage yet, just redirect
           console.error("Payment check error:", data.error);
           router.push("/");
         } else {
-          // Payment doesn't exist or invalid amount, clear session and redirect
-          sessionStorage.removeItem("razorpay_payment_id");
-          sessionStorage.removeItem("razorpay_payment_amount");
-          sessionStorage.removeItem("razorpay_payment_rank");
+          // Payment doesn't exist or invalid amount, clear localStorage and redirect
+          localStorage.removeItem("razorpay_payment_id");
+          localStorage.removeItem("razorpay_payment_amount");
+          localStorage.removeItem("razorpay_payment_rank");
           router.push("/");
         }
         setVerifying(false);
       })
       .catch((err) => {
         console.error("Error checking payment:", err);
-        // Network error - don't clear sessionStorage, just redirect
-        // SessionStorage might still be valid, let user try again
+        // Network error - don't clear localStorage, just redirect
+        // localStorage might still be valid, let user try again
         router.push("/");
         setVerifying(false);
       });
@@ -85,6 +85,17 @@ function StoriesContent() {
     return null; // Will redirect
   }
 
+  const handleShare = () => {
+    const shareText = `I'm ranked on GreedChain. Join the narrative.`;
+    const shareUrl = window.location.origin;
+
+    navigator.share?.({
+      title: "GreedChain",
+      text: shareText,
+      url: shareUrl,
+    }) || navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+  };
+
   return (
     <main className="min-h-screen bg-black text-white p-4">
       <div className="max-w-2xl mx-auto">
@@ -97,9 +108,19 @@ function StoriesContent() {
             Home
           </Link>
         </div>
+        <div>
+          <div className="text-left mb-8">
+            <button
+              onClick={handleShare}
+              className="bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+            >
+              Share Access
+            </button>
+          </div>
+        </div>
 
         <div className="mb-8 p-4 border border-white/20 rounded-lg flex flex-col items-center">
-          <p className="text-sm opacity-70 mb-3">₹2 - Create a new story</p>
+          <p className="text-sm opacity-70 mb-3">Start Your Own Story</p>
           <RazorpayButton2 />
         </div>
 
