@@ -1,63 +1,32 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+type Stats = {
+  count1: number;
+  count5: number;
+  count11: number;
+  totalAmount: number;
+};
+
 function SuccessContent() {
-  const params = useSearchParams();
-  const rawPaymentId = params.get("payment_id");
-
-  const isRazorpayPayment =
-    rawPaymentId &&
-    rawPaymentId !== "{payment_id}" &&
-    rawPaymentId.startsWith("pay_");
-
-  const paymentId = isRazorpayPayment ? rawPaymentId : null;
-
-
-  const [status, setStatus] = useState<"verifying" | "success" | "failed">(
-    paymentId ? "verifying" : "success"
-  );
-  const [data, setData] = useState<any>(null);
-  const [stats, setStats] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [prevStats, setPrevStats] = useState<Stats | null>(null);
+  const [visibleAmount, setVisibleAmount] = useState<1 | 5 | 11 | null>(null);
 
   /**
-   * ✅ Razorpay verification
-   */
-  useEffect(() => {
-    if (!paymentId) return;
-
-    fetch(`/api/verify-payment?payment_id=${paymentId}`, {
-      cache: "no-store",
-    })
-      .then(res => res.json())
-      .then(result => {
-        if (result.success) {
-          setData(result);
-          setStatus("success");
-        } else {
-          setError(result.error || "Payment verification failed");
-          setStatus("failed");
-        }
-      })
-      .catch(() => {
-        setError("Failed to verify payment");
-        setStatus("failed");
-      });
-  }, [paymentId]);
-
-  /**
-   * ✅ Stats polling (works for BOTH Razorpay & Cashfree)
+   * Poll stats (webhook-driven truth)
    */
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch(`/api/stats?t=${Date.now()}`, { cache: "no-store" });
-        const statsData = await res.json();
-        setStats(statsData);
-      } catch { }
+        const res = await fetch(`/api/stats?t=${Date.now()}`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        setStats(data);
+      } catch {}
     };
 
     fetchStats();
@@ -65,87 +34,75 @@ function SuccessContent() {
     return () => clearInterval(interval);
   }, []);
 
-  // ---------------- UI ----------------
+  /**
+   * Detect delta → unlock exactly ONE amount
+   */
+  useEffect(() => {
+    if (!stats) return;
 
-  if (status === "verifying") {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-black text-white">
-        <h1>Verifying your payment…</h1>
-      </main>
-    );
-  }
+    // first snapshot
+    if (!prevStats) {
+      setPrevStats(stats);
+      return;
+    }
 
-  if (status === "failed") {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="text-center max-w-md px-4">
-          <h1 className="text-2xl mb-4">Payment failed ❌</h1>
-          {error && <p className="text-sm opacity-60 mb-4">{error}</p>}
-          <Link href="/" className="text-blue-400 underline">
-            Go back
-          </Link>
-        </div>
-      </main>
-    );
-  }
+    if (stats.count1 > prevStats.count1) setVisibleAmount(1);
+    if (stats.count5 > prevStats.count5) setVisibleAmount(5);
+    if (stats.count11 > prevStats.count11) setVisibleAmount(11);
+
+    setPrevStats(stats);
+  }, [stats, prevStats]);
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-black text-white p-4">
       <div className="max-w-md w-full text-center">
         <h1 className="text-3xl font-bold mb-6">Payment Received ✅</h1>
 
-        {data?.amount && (
-          <div className="border border-white/20 rounded-lg p-4 mb-6">
-            <p className="text-sm opacity-60 mb-2">You paid</p>
-            <p className="text-2xl font-bold">₹{data.amount}</p>
+        {/* ---- Payment Count Reveal ---- */}
+        {stats && visibleAmount && (
+          <div className="border border-white/20 rounded-lg p-4 mb-4">
+            <p className="text-sm opacity-60 mb-3">You unlocked</p>
+
+            {visibleAmount === 1 && (
+              <div className="flex justify-between">
+                <span>₹1 payments</span>
+                <span className="font-semibold">{stats.count1}</span>
+              </div>
+            )}
+
+            {visibleAmount === 5 && (
+              <div className="flex justify-between">
+                <span>₹5 payments</span>
+                <span className="font-semibold">{stats.count5}</span>
+              </div>
+            )}
+
+            {visibleAmount === 11 && (
+              <div className="flex justify-between">
+                <span>₹11 payments</span>
+                <span className="font-semibold">{stats.count11}</span>
+              </div>
+            )}
           </div>
         )}
 
-        {stats && (
-          <>
-            <div className="border border-white/20 rounded-lg p-4 mb-4">
-              <p className="text-sm opacity-60 mb-3">Payment Counts</p>
-              <div className="space-y-2 text-left">
-                <div className="flex justify-between">
-                  <span>₹1 payments</span>
-                  {/* <span>{data?.amount === 1 ? stats.count1 : '***'}</span>
-                   */}
-                  <span>
-                    {paymentId
-                      ? (data?.amount === 1 ? stats.count1 : "***")
-                      : stats.count1}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>₹5 payments</span>
-                  {/* <span>{data?.amount === 5 ? stats.count5 : '***'}</span> */}
-                  <span>
-                    {paymentId
-                      ? (data?.amount === 5 ? stats.count5 : "***")
-                      : stats.count5}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>₹11 payments</span>
-                  {/* <span>{data?.amount === 11 ? stats.count11 : '***'}</span> */}
-                  <span>
-                    {paymentId
-                      ? (data?.amount === 11 ? stats.count11 : "***")
-                      : stats.count11}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border border-white/20 rounded-lg p-4">
-              <p className="text-sm opacity-60 mb-2">Total Collected</p>
-              <p className="text-2xl font-bold">₹{stats.totalAmount}</p>
-            </div>
-          </>
+        {/* ---- Waiting state ---- */}
+        {!visibleAmount && (
+          <p className="text-xs opacity-40 my-6">
+            Waiting for payment confirmation…
+          </p>
         )}
 
-        <p className="text-xs opacity-40 my-6">
-          Cashfree payments may take a few seconds to reflect.
+        {/* ---- Total is always public ---- */}
+        {stats && (
+          <div className="border border-white/20 rounded-lg p-4 mb-6">
+            <p className="text-sm opacity-60 mb-2">Total Collected</p>
+            <p className="text-2xl font-bold">₹{stats.totalAmount}</p>
+          </div>
+        )}
+
+        <p className="text-xs opacity-40 mb-6">
+          This experiment only reveals what your payment unlocked.
         </p>
 
         <Link
