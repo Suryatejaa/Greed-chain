@@ -27,6 +27,37 @@ const AMOUNT_CODE_MAP: Record<string, Amount> = {
 };
 
 /* ---------------- Page ---------------- */
+function SkeletonRow() {
+  return (
+    <div className="flex justify-between items-center animate-pulse">
+      <div className="h-4 w-32 bg-white/10 rounded" />
+      <div className="h-4 w-10 bg-white/10 rounded" />
+    </div>
+  );
+}
+function CountUp({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const duration = 500; // ms
+    const startTime = performance.now();
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const current = Math.floor(progress * value);
+      setDisplay(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      }
+    };
+
+    requestAnimationFrame(tick);
+  }, [value]);
+
+  return <span className="font-semibold">{display}</span>;
+}
 
 function SuccessContent() {
   const params = useSearchParams();
@@ -36,6 +67,7 @@ function SuccessContent() {
     code && AMOUNT_CODE_MAP[code] ? AMOUNT_CODE_MAP[code] : null;
 
   const [stats, setStats] = useState<Stats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   /* ---- Poll stats (webhook-driven truth) ---- */
   useEffect(() => {
@@ -46,6 +78,7 @@ function SuccessContent() {
         });
         const data = await res.json();
         setStats(data);
+        setLoadingStats(false);
       } catch {}
     };
 
@@ -63,30 +96,33 @@ function SuccessContent() {
 
         {/* ---- Unlock section ---- */}
         {stats && visibleAmount && (
-          <div className="border border-white/20 rounded-lg p-4 mb-4">
-            <p className="text-sm opacity-60 mb-3">You unlocked</p>
-
-            {visibleAmount === 1 && (
-              <div className="flex justify-between">
-                <span>₹1 payments</span>
-                <span className="font-semibold">{stats.count1}</span>
-              </div>
-            )}
-
-            {visibleAmount === 5 && (
-              <div className="flex justify-between">
-                <span>₹5 payments</span>
-                <span className="font-semibold">{stats.count5}</span>
-              </div>
-            )}
-
-            {visibleAmount === 11 && (
-              <div className="flex justify-between">
-                <span>₹11 payments</span>
-                <span className="font-semibold">{stats.count11}</span>
-              </div>
-            )}
-          </div>
+         <div className="border border-white/20 rounded-lg p-4 mb-4">
+         <p className="text-sm opacity-60 mb-3">You unlocked</p>
+       
+         {loadingStats && <SkeletonRow />}
+       
+         {!loadingStats && stats && visibleAmount === 1 && (
+           <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
+             <span>₹1 payments</span>
+             <CountUp value={stats.count1} />
+           </div>
+         )}
+       
+         {!loadingStats && stats && visibleAmount === 5 && (
+           <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
+             <span>₹5 payments</span>
+             <CountUp value={stats.count5} />
+           </div>
+         )}
+       
+         {!loadingStats && stats && visibleAmount === 11 && (
+           <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
+             <span>₹11 payments</span>
+             <CountUp value={stats.count11} />
+           </div>
+         )}
+       </div>
+       
         )}
 
         {/* ---- No / invalid code ---- */}
