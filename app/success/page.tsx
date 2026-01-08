@@ -14,6 +14,15 @@ function SuccessContent() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [prevStats, setPrevStats] = useState<Stats | null>(null);
   const [visibleAmount, setVisibleAmount] = useState<1 | 5 | 11 | null>(null);
+  const [unlockTimeoutReached, setUnlockTimeoutReached] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setUnlockTimeoutReached(true);
+    }, 8000); // 8 seconds is enough for webhook + polling
+
+    return () => clearTimeout(timer);
+  }, []);
 
   /**
    * Poll stats (webhook-driven truth)
@@ -26,7 +35,7 @@ function SuccessContent() {
         });
         const data = await res.json();
         setStats(data);
-      } catch {}
+      } catch { }
     };
 
     fetchStats();
@@ -40,18 +49,42 @@ function SuccessContent() {
   useEffect(() => {
     if (!stats) return;
 
-    // first snapshot
+    // First snapshot
     if (!prevStats) {
       setPrevStats(stats);
       return;
     }
 
-    if (stats.count1 > prevStats.count1) setVisibleAmount(1);
-    if (stats.count5 > prevStats.count5) setVisibleAmount(5);
-    if (stats.count11 > prevStats.count11) setVisibleAmount(11);
+    // Primary delta detection
+    if (stats.count1 > prevStats.count1) {
+      setVisibleAmount(1);
+      return;
+    }
+    if (stats.count5 > prevStats.count5) {
+      setVisibleAmount(5);
+      return;
+    }
+    if (stats.count11 > prevStats.count11) {
+      setVisibleAmount(11);
+      return;
+    }
+
+    // Fallback: timeout reached, infer most likely change
+    if (unlockTimeoutReached && !visibleAmount) {
+      const diffs = [
+        { amount: 1, diff: stats.count1 - prevStats.count1 },
+        { amount: 5, diff: stats.count5 - prevStats.count5 },
+        { amount: 11, diff: stats.count11 - prevStats.count11 },
+      ];
+
+      const changed = diffs.find(d => d.diff > 0);
+      if (changed) {
+        setVisibleAmount(changed.amount as 1 | 5 | 11);
+      }
+    }
 
     setPrevStats(stats);
-  }, [stats, prevStats]);
+  }, [stats, prevStats, unlockTimeoutReached, visibleAmount]);
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-black text-white p-4">
@@ -87,11 +120,18 @@ function SuccessContent() {
         )}
 
         {/* ---- Waiting state ---- */}
-        {!visibleAmount && (
+        {!visibleAmount && !unlockTimeoutReached && (
           <p className="text-xs opacity-40 my-6">
             Waiting for payment confirmation…
           </p>
         )}
+
+        {!visibleAmount && unlockTimeoutReached && (
+          <p className="text-xs opacity-40 my-6">
+            Payment recorded. Unlocking your view…
+          </p>
+        )}
+
 
         {/* ---- Total is always public ---- */}
         {stats && (
