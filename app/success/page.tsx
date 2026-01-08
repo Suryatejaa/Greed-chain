@@ -54,7 +54,7 @@ function SuccessContent() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("/api/stats", { cache: "no-store" });
+        const res = await fetch(`/api/stats?t=${Date.now()}`, { cache: "no-store" });
         const statsData = await res.json();
         setStats(statsData);
       } catch { }

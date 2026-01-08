@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import redis from "../../lib/redis";
+export const runtime = "nodejs"; 
+export const dynamic = "force-dynamic"; // 🔥 disables Next.js caching
+export const revalidate = 0;            // 🔥 no ISR
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import redis from "@/app/lib/redis";
 
+export const runtime = "nodejs"; 
+export const dynamic = "force-dynamic"; // 🔥 disables Next.js caching
+export const revalidate = 0;            // 🔥 no ISR
+
 export async function POST(req: Request) {
   console.log("🔥 CASHFREE WEBHOOK HIT");
 

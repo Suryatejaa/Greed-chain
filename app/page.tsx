@@ -12,12 +12,12 @@ export default function Home() {
 
         <p className="mb-8 text-sm opacity-60">
           This is a social experiment. You don&apos;t really need to see if you don&apos;t want to.
-          Just ignore it. Don&apos;t spread nonsense.
+          Just ignore and move on. Don&apos;t make a scene.
         </p>
 
         <div className="flex flex-col gap-4">
           {/* ₹1 */}
-          <PaymentCard amount={1}>
+          {/* <PaymentCard amount={1}>
             <RazorpayButton
               paymentButtonId="pl_Rz65r6ImL0PS8U"
               formId="razorpay-form-1"
@@ -25,7 +25,7 @@ export default function Home() {
           </PaymentCard>
 
           {/* ₹5 */}
-          <PaymentCard amount={5}>
+          {/* <PaymentCard amount={5}>
             <RazorpayButton
               paymentButtonId="pl_RzV5vndCmZSnu9"
               formId="razorpay-form-5"
@@ -33,23 +33,45 @@ export default function Home() {
           </PaymentCard>
 
           {/* ₹11 */}
-          <PaymentCard amount={11}>
+          {/* <PaymentCard amount={11}>
             <RazorpayButton
               paymentButtonId="pl_RzVCx1Qq9r0JoZ"
               formId="razorpay-form-11"
             />
-          </PaymentCard>
+          </PaymentCard> */}
 
           {/* Cashfree Fixed Button */}
-          <PaymentCard amount={1} label="Cashfree">
+          <PaymentCard amount={1}>
             <a
-              href="https://payments.cashfree.com/forms/greed-chain"
+              href="https://payments.cashfree.com/forms/rupee"
               target="_parent"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 border border-black rounded-md px-3 py-2 bg-white text-black hover:bg-gray-100"
             >
               <Image src={logo} alt="Cashfree" width={20} height={20} />
-              <span className="text-sm font-medium">Pay ₹1 (Cashfree)</span>
+              <span className="text-sm font-medium">Pay ₹1</span>
+            </a>
+          </PaymentCard>
+          <PaymentCard amount={5}>
+            <a
+              href="https://payments.cashfree.com/forms/five-rupees"
+              target="_parent"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 border border-black rounded-md px-3 py-2 bg-white text-black hover:bg-gray-100"
+            >
+              <Image src={logo} alt="Cashfree" width={20} height={20} />
+              <span className="text-sm font-medium">Pay ₹5</span>
+            </a>
+          </PaymentCard>
+          <PaymentCard amount={11}>
+            <a
+              href="https://payments.cashfree.com/forms/eleven-rupees"
+              target="_parent"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 border border-black rounded-md px-3 py-2 bg-white text-black hover:bg-gray-100"
+            >
+              <Image src={logo} alt="Cashfree" width={20} height={20} />
+              <span className="text-sm font-medium">Pay ₹11</span>
             </a>
           </PaymentCard>
         </div>

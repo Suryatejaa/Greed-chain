@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import redis from "@/app/lib/redis";
 
+export const dynamic = "force-dynamic"; // 🔥 disables Next.js caching
+export const revalidate = 0;            // 🔥 no ISR
+export const runtime = "nodejs"; 
+
 export async function GET() {
   const [
     count1,
@@ -16,11 +20,19 @@ export async function GET() {
     redis.get("totalPayments"),
   ]);
 
-  return NextResponse.json({
-    count1: Number(count1 || 0),
-    count5: Number(count5 || 0),
-    count11: Number(count11 || 0),
-    totalAmount: Number(totalAmount || 0),
-    totalPayments: Number(totalPayments || 0),
-  });
+  return NextResponse.json(
+    {
+      count1: Number(count1 || 0),
+      count5: Number(count5 || 0),
+      count11: Number(count11 || 0),
+      totalAmount: Number(totalAmount || 0),
+      totalPayments: Number(totalPayments || 0),
+    },
+    {
+      headers: {
+        // 🔥 kill browser + CDN cache
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      },
+    }
+  );
 }
