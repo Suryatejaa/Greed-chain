@@ -6,7 +6,15 @@ import Link from "next/link";
 
 function SuccessContent() {
   const params = useSearchParams();
-  const paymentId = params.get("payment_id"); // Razorpay only
+  const rawPaymentId = params.get("payment_id");
+
+  const isRazorpayPayment =
+    rawPaymentId &&
+    rawPaymentId !== "{payment_id}" &&
+    rawPaymentId.startsWith("pay_");
+
+  const paymentId = isRazorpayPayment ? rawPaymentId : null;
+
 
   const [status, setStatus] = useState<"verifying" | "success" | "failed">(
     paymentId ? "verifying" : "success"
@@ -49,7 +57,7 @@ function SuccessContent() {
         const res = await fetch("/api/stats", { cache: "no-store" });
         const statsData = await res.json();
         setStats(statsData);
-      } catch {}
+      } catch { }
     };
 
     fetchStats();
