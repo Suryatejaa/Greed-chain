@@ -40,11 +40,11 @@ export async function GET(req: Request) {
 
     // Track counts by amount
     if (amount === 1) {
-      await redis.incr("count:1");
+      await redis.incr(`count:${amount}`);
     } else if (amount === 5) {
-      await redis.incr("count:5");
+      await redis.incr(`count:${amount}`);
     } else if (amount === 11) {
-      await redis.incr("count:11");
+      await redis.incr(`count:${amount}`);
     }
 
     const response = {
