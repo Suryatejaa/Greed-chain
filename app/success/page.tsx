@@ -79,7 +79,7 @@ function SuccessContent() {
         const data = await res.json();
         setStats(data);
         setLoadingStats(false);
-      } catch {}
+      } catch { }
     };
 
     fetchStats();
@@ -96,33 +96,33 @@ function SuccessContent() {
 
         {/* ---- Unlock section ---- */}
         {stats && visibleAmount && (
-         <div className="border border-white/20 rounded-lg p-4 mb-4">
-         <p className="text-sm opacity-60 mb-3">You unlocked</p>
-       
-         {loadingStats && <SkeletonRow />}
-       
-         {!loadingStats && stats && visibleAmount === 1 && (
-           <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
-             <span>₹1 payments</span>
-             <CountUp value={stats.count1} />
-           </div>
-         )}
-       
-         {!loadingStats && stats && visibleAmount === 5 && (
-           <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
-             <span>₹5 payments</span>
-             <CountUp value={stats.count5} />
-           </div>
-         )}
-       
-         {!loadingStats && stats && visibleAmount === 11 && (
-           <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
-             <span>₹11 payments</span>
-             <CountUp value={stats.count11} />
-           </div>
-         )}
-       </div>
-       
+          <div className="border border-white/20 rounded-lg p-4 mb-4">
+            <p className="text-sm opacity-60 mb-3">You unlocked</p>
+
+            {loadingStats && <SkeletonRow />}
+
+            {!loadingStats && stats && visibleAmount === 1 && (
+              <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
+                <span>₹1 payments</span>
+                <CountUp value={stats.count1} />
+              </div>
+            )}
+
+            {!loadingStats && stats && visibleAmount === 5 && (
+              <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
+                <span>₹5 payments</span>
+                <CountUp value={stats.count5} />
+              </div>
+            )}
+
+            {!loadingStats && stats && visibleAmount === 11 && (
+              <div className="flex justify-between animate-[fadeIn_0.4s_ease-out]">
+                <span>₹11 payments</span>
+                <CountUp value={stats.count11} />
+              </div>
+            )}
+          </div>
+
         )}
 
         {/* ---- No / invalid code ---- */}
@@ -150,6 +150,19 @@ function SuccessContent() {
         >
           Back to Home
         </Link>
+        {/* ---- Share button ---- */}
+        <button
+          onClick={() => {
+            navigator.share({
+              title: "GreedChain",
+              text: "Check out this social experiment!",
+              url: window.location.href,
+            });
+          }}
+          className="block bg-white text-black px-6 py-3 w-full rounded-xl font-semibold mt-4"
+        >
+          Share with friends
+        </button>
       </div>
     </main>
   );
