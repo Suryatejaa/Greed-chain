@@ -104,15 +104,15 @@ function SuccessContent() {
                 <div className="space-y-2 text-left">
                   <div className="flex justify-between">
                     <span className="opacity-80">₹1 payments:</span>
-                    <span className="font-semibold">{stats.count1}</span>
+                    <span className="font-semibold">{data?.amount === 1 ? stats.count1 : '***'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="opacity-80">₹5 payments:</span>
-                    <span className="font-semibold">{stats.count5}</span>
+                    <span className="font-semibold">{data?.amount === 5 ? stats.count5 : '***'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="opacity-80">₹11 payments:</span>
-                    <span className="font-semibold">{stats.count11}</span>
+                    <span className="font-semibold">{data?.amount === 11 ? stats.count11 : '***'}</span>
                   </div>
                 </div>
               </div>
