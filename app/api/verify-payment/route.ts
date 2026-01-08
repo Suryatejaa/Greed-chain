@@ -30,35 +30,21 @@ export async function GET(req: Request) {
 
     // atomic increments
     const rank = await redis.incr("totalPayments");
-    const amountInRupees = Math.round((payment as any).amount / 100); // Convert from paise to rupees and ensure integer
+    const amountInRupees = Math.round((payment as any).amount / 100);
     const totalAmount = await redis.incrby(
       "totalAmount",
       amountInRupees
     );
 
-    const amount = amountInRupees; // Already converted above
-    
-    // Define tier limits
-    let maxSentences = 0;
-    let maxStories = 0;
-    let amountType = "unknown";
-    
+    const amount = amountInRupees;
+
+    // Track counts by amount
     if (amount === 1) {
-      maxSentences = 1;
-      maxStories = 0;
-      amountType = "addSentence";
+      await redis.incr("count:1");
     } else if (amount === 5) {
-      maxSentences = 3;
-      maxStories = 1;
-      amountType = "pro";
+      await redis.incr("count:5");
     } else if (amount === 11) {
-      maxSentences = 5;
-      maxStories = 3;
-      amountType = "maestro";
-    } else if (amount === 2) {
-      maxSentences = 0;
-      maxStories = 1;
-      amountType = "createStory";
+      await redis.incr("count:11");
     }
 
     const response = {
@@ -67,10 +53,7 @@ export async function GET(req: Request) {
       totalPayments: rank,
       totalAmount,
       amount,
-      amountType,
       paymentId,
-      maxSentences,
-      maxStories,
     };
 
     // Store payment info
@@ -80,18 +63,10 @@ export async function GET(req: Request) {
       "EX",
       86400 * 30 // 30 days expiry
     );
-    
-    // Initialize usage counters
-    await redis.set(`payment:${paymentId}:sentences_used`, "0", "EX", 86400 * 30);
-    await redis.set(`payment:${paymentId}:stories_used`, "0", "EX", 86400 * 30);
-    
-    // For backward compatibility with ₹1 (old boolean check)
-    if (amount === 1) {
-      await redis.set(`payment:${paymentId}:used`, "false", "EX", 86400 * 30);
-    }
 
     return NextResponse.json(response);
   } catch (err) {
-    return NextResponse.json({ success: false }, { status: 500 });
+    console.error("Error verifying payment:", err);
+    return NextResponse.json({ success: false, error: "Failed to verify payment" }, { status: 500 });
   }
 }
