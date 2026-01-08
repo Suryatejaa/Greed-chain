@@ -108,15 +108,31 @@ function SuccessContent() {
               <div className="space-y-2 text-left">
                 <div className="flex justify-between">
                   <span>₹1 payments</span>
-                  <span>{data?.amount === 1 ? stats.count1 : '***'}</span>
+                  {/* <span>{data?.amount === 1 ? stats.count1 : '***'}</span>
+                   */}
+                  <span>
+                    {paymentId
+                      ? (data?.amount === 1 ? stats.count1 : "***")
+                      : stats.count1}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>₹5 payments</span>
-                  <span>{data?.amount === 5 ? stats.count5 : '***'}</span>
+                  {/* <span>{data?.amount === 5 ? stats.count5 : '***'}</span> */}
+                  <span>
+                    {paymentId
+                      ? (data?.amount === 5 ? stats.count5 : "***")
+                      : stats.count5}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>₹11 payments</span>
-                  <span>{data?.amount === 11 ? stats.count11 : '***'}</span>
+                  {/* <span>{data?.amount === 11 ? stats.count11 : '***'}</span> */}
+                  <span>
+                    {paymentId
+                      ? (data?.amount === 11 ? stats.count11 : "***")
+                      : stats.count11}
+                  </span>
                 </div>
               </div>
             </div>

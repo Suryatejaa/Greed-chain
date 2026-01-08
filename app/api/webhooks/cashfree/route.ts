@@ -22,7 +22,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const amount = Number(order_amount);
+  const amount = Math.round(Number(order_amount));
+
 
   const rank = await redis.incr("totalPayments");
   const totalAmount = await redis.incrby("totalAmount", amount);
