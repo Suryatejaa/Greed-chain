@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import redis from "@/app/lib/redis";
 
 export async function POST(req: Request) {
+  console.log("🔥 CASHFREE WEBHOOK HIT");
   const body = await req.json();
-
+  console.log("📦 Webhook body:", JSON.stringify(body));
   const {
     order_id,
     cf_payment_id,
@@ -55,6 +56,9 @@ export async function POST(req: Request) {
     "EX",
     86400 * 30
   );
+
+
+
 
   return NextResponse.json({ ok: true });
 }
