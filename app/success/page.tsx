@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+
+/* ---------------- Types ---------------- */
 
 type Stats = {
   count1: number;
@@ -10,23 +13,31 @@ type Stats = {
   totalAmount: number;
 };
 
+type Amount = 1 | 5 | 11;
+
+/* ---------------- Secret code map ---------------- */
+/**
+ * Obfuscated on purpose.
+ * Not security — just confusion.
+ */
+const AMOUNT_CODE_MAP: Record<string, Amount> = {
+  a9xQ: 1,
+  Kp2Z: 5,
+  "7LmR": 11,
+};
+
+/* ---------------- Page ---------------- */
+
 function SuccessContent() {
+  const params = useSearchParams();
+  const code = params.get("k");
+
+  const visibleAmount: Amount | null =
+    code && AMOUNT_CODE_MAP[code] ? AMOUNT_CODE_MAP[code] : null;
+
   const [stats, setStats] = useState<Stats | null>(null);
-  const [prevStats, setPrevStats] = useState<Stats | null>(null);
-  const [visibleAmount, setVisibleAmount] = useState<1 | 5 | 11 | null>(null);
-  const [unlockTimeoutReached, setUnlockTimeoutReached] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setUnlockTimeoutReached(true);
-    }, 8000); // 8 seconds is enough for webhook + polling
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  /**
-   * Poll stats (webhook-driven truth)
-   */
+  /* ---- Poll stats (webhook-driven truth) ---- */
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -35,7 +46,7 @@ function SuccessContent() {
         });
         const data = await res.json();
         setStats(data);
-      } catch { }
+      } catch {}
     };
 
     fetchStats();
@@ -43,55 +54,14 @@ function SuccessContent() {
     return () => clearInterval(interval);
   }, []);
 
-  /**
-   * Detect delta → unlock exactly ONE amount
-   */
-  useEffect(() => {
-    if (!stats) return;
-
-    // First snapshot
-    if (!prevStats) {
-      setPrevStats(stats);
-      return;
-    }
-
-    // Primary delta detection
-    if (stats.count1 > prevStats.count1) {
-      setVisibleAmount(1);
-      return;
-    }
-    if (stats.count5 > prevStats.count5) {
-      setVisibleAmount(5);
-      return;
-    }
-    if (stats.count11 > prevStats.count11) {
-      setVisibleAmount(11);
-      return;
-    }
-
-    // Fallback: timeout reached, infer most likely change
-    if (unlockTimeoutReached && !visibleAmount) {
-      const diffs = [
-        { amount: 1, diff: stats.count1 - prevStats.count1 },
-        { amount: 5, diff: stats.count5 - prevStats.count5 },
-        { amount: 11, diff: stats.count11 - prevStats.count11 },
-      ];
-
-      const changed = diffs.find(d => d.diff > 0);
-      if (changed) {
-        setVisibleAmount(changed.amount as 1 | 5 | 11);
-      }
-    }
-
-    setPrevStats(stats);
-  }, [stats, prevStats, unlockTimeoutReached, visibleAmount]);
+  /* ---------------- UI ---------------- */
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-black text-white p-4">
       <div className="max-w-md w-full text-center">
         <h1 className="text-3xl font-bold mb-6">Payment Received ✅</h1>
 
-        {/* ---- Payment Count Reveal ---- */}
+        {/* ---- Unlock section ---- */}
         {stats && visibleAmount && (
           <div className="border border-white/20 rounded-lg p-4 mb-4">
             <p className="text-sm opacity-60 mb-3">You unlocked</p>
@@ -119,19 +89,12 @@ function SuccessContent() {
           </div>
         )}
 
-        {/* ---- Waiting state ---- */}
-        {!visibleAmount && !unlockTimeoutReached && (
+        {/* ---- No / invalid code ---- */}
+        {!visibleAmount && (
           <p className="text-xs opacity-40 my-6">
-            Waiting for payment confirmation…
+            Payment recorded. Thanks for participating.
           </p>
         )}
-
-        {!visibleAmount && unlockTimeoutReached && (
-          <p className="text-xs opacity-40 my-6">
-            Payment recorded. Unlocking your view…
-          </p>
-        )}
-
 
         {/* ---- Total is always public ---- */}
         {stats && (
@@ -155,6 +118,8 @@ function SuccessContent() {
     </main>
   );
 }
+
+/* ---------------- Suspense wrapper ---------------- */
 
 export default function SuccessPage() {
   return (
