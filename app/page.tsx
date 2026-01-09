@@ -6,7 +6,8 @@ import logo from "../public/logo/s-logo.png";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4">
+    <main className="relative z-10 min-h-screen flex flex-col items-center justify-center bg-black/30 backdrop-blur-lg border border-white/20 text-white p-4">
+      {/* // <main className="min-h-screen flex flex-col items-center justify-center bg-black/30 backdrop-blur-lg border border-white/20 text-white p-4"> */}
       <div className="max-w-md w-full text-center">
         <h1 className="text-4xl font-bold mb-4">GreedChain</h1>
 

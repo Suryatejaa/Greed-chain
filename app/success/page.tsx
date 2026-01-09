@@ -90,7 +90,7 @@ function SuccessContent() {
   /* ---------------- UI ---------------- */
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-black text-white p-4">
+    <main className="relative z-10 min-h-screen flex items-center justify-center bg-black/30 backdrop-blur-lg border border-white/20 text-white p-4">
       <div className="max-w-md w-full text-center">
         <h1 className="text-3xl font-bold mb-6">Payment Received ✅</h1>
 
