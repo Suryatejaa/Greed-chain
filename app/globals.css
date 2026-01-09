@@ -89,3 +89,14 @@ body::after {
     transform: translate(0, 0) rotate(0deg);
   }
 }
+
+@keyframes gentleReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

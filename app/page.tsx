@@ -1,6 +1,4 @@
-"use client";
-
-import RazorpayButton from "./components/RazorpayButton";
+// "use client";
 import Image from "next/image";
 import logo from "../public/logo/s-logo.png";
 
@@ -11,35 +9,30 @@ export default function Home() {
       <div className="max-w-md w-full text-center">
         <h1 className="text-4xl font-bold mb-4">GreedChain</h1>
 
-        <p className="mb-8 text-sm opacity-60">
+        <p className="mb-8 text-sm opacity-80">
           This is a social experiment. You don&apos;t really need to see if you don&apos;t want to.
           Just ignore and move on. Don&apos;t make a drama.
         </p>
+        <p
+          className="
+    mb-8
+    text-xs
+    opacity-60
+    leading-relaxed
+    border
+    border-white/15
+    rounded-md
+    px-3
+    py-2
+    animate-[gentleReveal_0.6s_ease-out_0.4s_both]
+  "
+        >
+          No refunds. Payments are voluntary and final.
+          Please participate only if you’re comfortable spending the amount.
+        </p>
+
 
         <div className="flex flex-col gap-4">
-          {/* ₹1 */}
-          {/* <PaymentCard amount={1}>
-            <RazorpayButton
-              paymentButtonId="pl_Rz65r6ImL0PS8U"
-              formId="razorpay-form-1"
-            />
-          </PaymentCard>
-
-          {/* ₹5 */}
-          {/* <PaymentCard amount={5}>
-            <RazorpayButton
-              paymentButtonId="pl_RzV5vndCmZSnu9"
-              formId="razorpay-form-5"
-            />
-          </PaymentCard>
-
-          {/* ₹11 */}
-          {/* <PaymentCard amount={11}>
-            <RazorpayButton
-              paymentButtonId="pl_RzVCx1Qq9r0JoZ"
-              formId="razorpay-form-11"
-            />
-          </PaymentCard> */}
 
           {/* Cashfree Fixed Button */}
           <PaymentCard amount={1} label="To see how many paid ONE rupee">
@@ -96,7 +89,7 @@ function PaymentCard({
     <div className="flex flex-col p-4 border border-white/20 rounded-lg hover:border-white/40 transition-colors">
       <div className="flex items-center justify-between mb-3">
         <p className="text-lg font-semibold">
-          Pay ₹{amount} {label && <span className="opacity-50">({label})</span>}
+          Pay ₹{amount} {label && <span className="opacity-80">({label})</span>}
         </p>
       </div>
       {children}
