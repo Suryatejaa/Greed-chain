@@ -12,7 +12,7 @@ export default function Home() {
 
         <p className="mb-8 text-sm opacity-60">
           This is a social experiment. You don&apos;t really need to see if you don&apos;t want to.
-          Just ignore and move on. Don&apos;t make a scene.
+          Just ignore and move on. Don&apos;t make a drama.
         </p>
 
         <div className="flex flex-col gap-4">
@@ -41,7 +41,7 @@ export default function Home() {
           </PaymentCard> */}
 
           {/* Cashfree Fixed Button */}
-          <PaymentCard amount={1}>
+          <PaymentCard amount={1} label="To see how many paid ONE rupee">
             <a
               href="https://payments.cashfree.com/forms/rupee"
               target="_parent"
@@ -52,7 +52,7 @@ export default function Home() {
               <span className="text-sm font-medium">Pay ₹1</span>
             </a>
           </PaymentCard>
-          <PaymentCard amount={5}>
+          <PaymentCard amount={5} label="To see how many paid FIVE rupees">
             <a
               href="https://payments.cashfree.com/forms/five-rupees"
               target="_parent"
@@ -63,7 +63,7 @@ export default function Home() {
               <span className="text-sm font-medium">Pay ₹5</span>
             </a>
           </PaymentCard>
-          <PaymentCard amount={11}>
+          <PaymentCard amount={11} label="To see how many paid ELEVEN rupees">
             <a
               href="https://payments.cashfree.com/forms/eleven-rupees"
               target="_parent"
